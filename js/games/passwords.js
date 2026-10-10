@@ -87,7 +87,7 @@ window.GameModules.passwords = function (root, ctx) {
     <div class="forge">
       <label class="forge-label" for="pwInput">Твой пароль</label>
       <input class="forge-input" id="pwInput" type="text" autocomplete="off" spellcheck="false"
-        maxlength="40" placeholder="Например: Ночь+Река+7маяк!" />
+        maxlength="40" placeholder="" />
       <div class="pw-meter"><i id="pwBar"></i></div>
       <div class="forge-stats">
         <span class="pw-label" id="pwLab">—</span>
