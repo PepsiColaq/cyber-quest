@@ -693,26 +693,37 @@
   color: var(--cyan);
 }
 
-/* --- Фишинг: зоны без подсказки пунктиром (иначе спойлер) --- */
+/* --- Фишинг: зоны БЕЗ пунктира/подчёркивания (спойлер ответов) --- */
 .mail.magnify .mail-body,
 .mail.magnify .mail-head {
   cursor: default;
 }
+.mail .zone,
 .zone {
   cursor: pointer;
-  padding: 0;
+  padding: 0 1px;
   border-radius: 3px;
-  border-bottom: none;
-  text-decoration: none;
+  border: none !important;
+  border-bottom: none !important;
+  text-decoration: none !important;
+  background: transparent;
+  box-shadow: none;
   transition: background var(--dur-2), color var(--dur-2), box-shadow var(--dur-2);
 }
+.mail .zone.link,
 .zone.link {
   color: var(--cyan);
-  text-decoration: underline;
+  /* обычная ссылка в письме — сплошная, не пунктир */
+  text-decoration: underline !important;
+  text-decoration-style: solid !important;
 }
 .zone:hover:not(.done) {
   background: rgba(232, 195, 106, 0.18);
   box-shadow: 0 0 0 2px rgba(232, 195, 106, 0.25);
+  text-decoration: none !important;
+}
+.zone.link:hover:not(.done) {
+  text-decoration: underline !important;
 }
 .zone.flag {
   background: var(--danger-soft);

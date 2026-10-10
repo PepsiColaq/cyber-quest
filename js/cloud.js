@@ -117,9 +117,22 @@ window.Cloud = (function () {
 
   async function heartbeat(extra) {
     if (!ready || !sessionId) return;
+    const ex = extra || {};
+    // RPC security definer — работает даже без GRANT UPDATE на sessions
+    const r = await safe(() =>
+      client.rpc("player_touch", {
+        p_id: sessionId,
+        p_status: ex.status || null,
+        p_game: ex.current_game === undefined ? null : ex.current_game,
+        p_score: typeof ex.total_score === "number" ? ex.total_score : null,
+        p_clear_game: ex.current_game === null,
+      })
+    );
+    if (r && !r.error) return;
+    // запасной путь: прямой UPDATE
     const patch = Object.assign(
       { last_seen: new Date().toISOString() },
-      extra || {}
+      ex
     );
     await safe(() => client.from("sessions").update(patch).eq("id", sessionId));
   }
