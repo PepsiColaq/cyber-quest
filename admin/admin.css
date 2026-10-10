@@ -14,6 +14,11 @@
     radial-gradient(60% 50% at 50% 0%, rgba(88, 224, 216, 0.08), transparent 60%),
     var(--bg);
 }
+/* display:grid выше перебивает HTML [hidden] — без этого «вход» выглядит как ничего */
+.admin-login[hidden],
+.admin-dash[hidden] {
+  display: none !important;
+}
 .admin-card {
   width: min(420px, 100%);
   padding: 28px;
