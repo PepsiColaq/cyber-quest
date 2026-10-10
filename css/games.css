@@ -36,11 +36,11 @@
 .stage-id .st-meta b {
   font-family: var(--font-ui);
   font-weight: 700;
-  font-size: var(--fs-h3);
+  font-size: clamp(20px, 1.8vw, 26px);
   display: block;
 }
 .stage-id .st-meta span {
-  font-size: var(--fs-xs);
+  font-size: clamp(12px, 1.05vw, 14px);
   color: var(--text-faint);
   font-family: var(--font-mono);
   letter-spacing: 0.14em;
@@ -114,15 +114,16 @@
   min-height: 340px;
 }
 .q-prompt {
-  font-size: var(--fs-h3);
+  font-size: clamp(22px, 2.2vw, 28px);
   font-family: var(--font-ui);
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .q-sub {
   color: var(--text-dim);
-  font-size: var(--fs-sm);
+  font-size: clamp(16px, 1.35vw, 19px);
   margin-bottom: 22px;
+  line-height: 1.45;
 }
 
 /* ----- Сетка опций / кнопок выбора ----- */
@@ -291,11 +292,11 @@
 .mail-row {
   display: flex;
   gap: 10px;
-  font-size: var(--fs-sm);
+  font-size: clamp(15px, 1.2vw, 18px);
 }
 .mail-row b {
   color: var(--text-faint);
-  width: 64px;
+  width: 72px;
   flex: none;
   font-family: var(--font-mono);
 }
@@ -303,9 +304,9 @@
   word-break: break-all;
 }
 .mail-body {
-  padding: 20px;
+  padding: 22px;
   color: var(--text-dim);
-  font-size: var(--fs-body);
+  font-size: clamp(16px, 1.35vw, 20px);
   line-height: 1.7;
 }
 .mail-body .link {
@@ -717,69 +718,60 @@
   display: grid;
   gap: 14px;
 }
-.forge-pw {
-  min-height: 58px;
-  padding: 14px 18px;
+.forge-label {
+  font-size: clamp(14px, 1.1vw, 16px);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.forge-input {
+  width: 100%;
+  min-height: 64px;
+  padding: 16px 18px;
   border-radius: var(--r-md);
   border: 1px solid var(--stroke-strong);
   background: var(--glass-soft);
+  color: var(--text);
   font-family: var(--font-mono);
-  font-size: clamp(16px, 2.2vw, 24px);
-  word-break: break-all;
-  display: flex;
-  align-items: center;
+  font-size: clamp(18px, 2.2vw, 26px);
+  outline: none;
 }
-.pw-caret {
-  width: 2px;
-  height: 1.2em;
-  background: var(--gold);
-  margin-left: 2px;
-  animation: caret 1s steps(1) infinite;
+.forge-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
 }
-@keyframes caret {
-  50% {
-    opacity: 0;
-  }
+.forge-input:disabled {
+  opacity: 0.7;
 }
 .forge-stats {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: clamp(15px, 1.2vw, 18px);
 }
 .forge-crack {
   color: var(--text-dim);
-  font-size: var(--fs-sm);
 }
 .forge-crack b {
   color: var(--gold);
 }
-.forge-blocks {
+.pw-label {
+  font-weight: 700;
+  font-size: clamp(16px, 1.3vw, 20px);
+}
+.forge-tips {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-faint);
+  font-size: clamp(13px, 1.05vw, 15px);
 }
-.forge-b {
-  padding: 12px 16px;
+.forge-tip {
+  padding: 6px 12px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--stroke-strong);
-  background: var(--glass);
-  color: var(--text);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  transition: transform var(--dur-1) var(--ease), border-color var(--dur-2),
-    background var(--dur-2);
-}
-.forge-b:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: var(--gold);
-}
-.forge-b.ghost {
+  border: 1px solid var(--stroke);
+  background: var(--glass-soft);
   color: var(--text-dim);
-}
-.forge-b:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* --- Соц.инженер: шкала подозрения + «печатает…» --- */
@@ -979,16 +971,16 @@
   gap: 2px;
 }
 .gi-head .st-meta b {
-  font-size: 18px;
+  font-size: clamp(20px, 2vw, 26px);
 }
 .gi-head .st-meta span {
-  font-size: 12px;
+  font-size: clamp(12px, 1.05vw, 14px);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
 .gi-card {
-  padding: 22px;
+  padding: clamp(22px, 3vw, 32px);
   border-radius: var(--r-lg);
   border: 1px solid var(--stroke);
   background: linear-gradient(180deg, var(--surface), var(--surface-2, var(--surface)));
@@ -998,43 +990,43 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold);
   background: var(--gold-soft);
   border: 1px solid var(--gold);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .gi-badge svg {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
 }
 .gi-title {
-  font-size: 20px;
+  font-size: clamp(24px, 2.4vw, 30px);
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .gi-goal {
-  font-size: 14px;
+  font-size: clamp(16px, 1.35vw, 19px);
   color: var(--text-dim);
-  line-height: 1.5;
-  margin-bottom: 16px;
+  line-height: 1.55;
+  margin-bottom: 18px;
 }
 .gi-rules {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 .gi-rule {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  font-size: 13.5px;
-  line-height: 1.45;
+  font-size: clamp(15px, 1.25vw, 18px);
+  line-height: 1.5;
   color: var(--text-dim);
 }
 .gi-rule b {
@@ -1078,6 +1070,8 @@
 .gi-go {
   width: 100%;
   justify-content: center;
+  font-size: clamp(16px, 1.3vw, 18px);
+  padding: 14px 20px;
 }
 
 /* ядро: подпись + направляющие стрелки потока */
