@@ -55,32 +55,67 @@
     return sb;
   }
 
+  async function fetchJson(url, opts, ms) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms || 12000);
+    try {
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    } catch (e) {
+      if (e && (e.name === "AbortError" || String(e).includes("abort"))) {
+        throw new Error("timeout");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function api(action, extra) {
     const c = cfg();
     const day = (extra && extra.day) || $("#dayPick")?.value || today();
 
     // 1) Edge Function, если явно задана
     if (c.adminFn) {
-      const res = await fetch(c.adminFn, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, password, day }),
-      });
-      const data = await res.json().catch(() => ({}));
+      const { res, data } = await fetchJson(
+        c.adminFn,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, password, day }),
+        },
+        12000
+      );
       if (!res.ok) throw new Error(data.error || "http_" + res.status);
       if (data.error) throw new Error(data.error);
       return data;
     }
 
-    // 2) RPC admin_api — без CLI
-    const client = ensureClient();
-    if (!client) throw new Error("Заполни url и anonKey в js/cloud-config.js");
-    const { data, error } = await client.rpc("admin_api", {
-      p_password: password,
-      p_action: action,
-      p_day: day,
-    });
-    if (error) throw new Error(error.message || "rpc_error");
+    // 2) Прямой REST RPC — надёжнее, чем зависающий supabase-js в части сетей
+    if (!c.url || !c.anonKey) throw new Error("Заполни url и anonKey в js/cloud-config.js");
+    const endpoint = c.url.replace(/\/$/, "") + "/rest/v1/rpc/admin_api";
+    const { res, data } = await fetchJson(
+      endpoint,
+      {
+        method: "POST",
+        headers: {
+          apikey: c.anonKey,
+          Authorization: "Bearer " + c.anonKey,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          p_password: password,
+          p_action: action,
+          p_day: day || null,
+        }),
+      },
+      12000
+    );
+    if (!res.ok) {
+      throw new Error(data.message || data.error || "http_" + res.status);
+    }
     if (data && data.error) throw new Error(data.error);
     return data || {};
   }
@@ -104,8 +139,10 @@
   function friendlyErr(e) {
     const msg = String((e && e.message) || e || "");
     if (msg === "unauthorized") return "Неверный пароль";
+    if (msg === "timeout")
+      return "Облако не отвечает (таймаут 12 с). Открой swdwpsfnvqlivpxwxwwj.supabase.co — если не грузится, сеть/антивирус режет Supabase.";
     if (/Failed to fetch|NetworkError|fetch/i.test(msg))
-      return "Нет связи с облаком. Проверь интернет и Project URL в cloud-config.js (Ctrl+F5).";
+      return "Нет связи с Supabase из браузера (DNS/файрвол/антивирус). Сайт GitHub открывается, а *.supabase.co — нет.";
     if (/crypt does not exist/i.test(msg))
       return "В базе не включён pgcrypto — выполни supabase/fix-pgcrypto.sql";
     return msg || "Не удалось войти";
