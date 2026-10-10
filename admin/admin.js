@@ -213,10 +213,45 @@
     }
   }
 
+  function isFinishedRun(r) {
+    return !!(r && (r.finished_at || r.duration_ms != null));
+  }
+
+  function buildStats(attempts, runs, liveCount) {
+    const done = runs.filter(isFinishedRun);
+    const scores = done.map((r) => Number(r.score) || 0);
+    const byNick = {};
+    done.forEach((r) => {
+      const k = (r.nick || "").toLowerCase();
+      if (!byNick[k]) byNick[k] = { nick: r.nick, score: 0, games: 0 };
+      byNick[k].score += Number(r.score) || 0;
+      byNick[k].games += 1;
+    });
+    attempts.forEach((a) => {
+      const k = (a.nick || "").toLowerCase();
+      if (!byNick[k]) byNick[k] = { nick: a.nick, score: 0, games: 0 };
+      byNick[k].score = Math.max(byNick[k].score, Number(a.score) || 0);
+    });
+    const players = Object.keys(byNick).length;
+    const sum = scores.reduce((a, b) => a + b, 0);
+    const avgMission = scores.length ? Math.round(sum / scores.length) : 0;
+    const bestMission = scores.length ? Math.max(...scores) : 0;
+    const bestPlayer = Object.values(byNick).sort((a, b) => b.score - a.score)[0];
+    return {
+      missions: done.length,
+      avgMission,
+      bestMission,
+      players,
+      online: liveCount || 0,
+      bestPlayer: bestPlayer ? bestPlayer.nick + " · " + bestPlayer.score : "—",
+    };
+  }
+
   async function refreshJournal() {
     const data = await api("journal");
     const attempts = data.attempts || [];
-    const runs = data.runs || [];
+    const allRuns = data.runs || [];
+    const runs = allRuns.filter(isFinishedRun);
     const runsByNick = {};
     runs.forEach((r) => {
       const k = (r.nick || "").toLowerCase();
@@ -224,72 +259,116 @@
       runsByNick[k].push(r);
     });
 
+    // Журнал: attempts, иначе собираем по позывным из завершённых миссий
+    let journalRows = attempts.slice();
+    if (!journalRows.length && runs.length) {
+      const map = {};
+      runs.forEach((r) => {
+        const k = (r.nick || "").toLowerCase();
+        if (!map[k]) {
+          map[k] = {
+            nick: r.nick,
+            score: 0,
+            games: [],
+            finished_at: r.finished_at || r.started_at,
+          };
+        }
+        map[k].score += Number(r.score) || 0;
+        if (r.game_id && !map[k].games.includes(r.game_id)) map[k].games.push(r.game_id);
+        const t = r.finished_at || r.started_at;
+        if (t && t > map[k].finished_at) map[k].finished_at = t;
+      });
+      journalRows = Object.values(map).sort((a, b) =>
+        String(b.finished_at).localeCompare(String(a.finished_at))
+      );
+    }
+
     const jt = $("#journalTable tbody");
-    if (!attempts.length) {
+    if (!journalRows.length) {
       jt.innerHTML =
-        '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-faint)">Пока пусто</td></tr>';
+        '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-faint)">Пока пусто — появятся после завершения миссий</td></tr>';
     } else {
-      jt.innerHTML = attempts
+      jt.innerHTML = journalRows
         .map((a) => {
           const list = runsByNick[(a.nick || "").toLowerCase()] || [];
           const detail = list
             .map(
               (r) =>
-                `${TITLES[r.game_id] || r.game_id}: ${r.score ?? 0} (${fmtDur(r.duration_ms)})`
+                `${TITLES[r.game_id] || r.game_id}: <b>${r.score ?? 0}</b> (${fmtDur(r.duration_ms)})`
             )
             .join("<br>");
           const t = a.finished_at ? new Date(a.finished_at).toLocaleString("ru-RU") : "";
+          const games =
+            a.games && a.games.length
+              ? a.games.map((g) => TITLES[g] || g).join(", ")
+              : list.map((r) => TITLES[r.game_id] || r.game_id).join(", ");
           return `<tr>
             <td>${esc(t)}</td>
             <td><b>${esc(a.nick)}</b></td>
             <td class="score">${a.score ?? 0}</td>
             <td>${esc(a.rank || "")}</td>
-            <td>${esc((a.games || []).map((g) => TITLES[g] || g).join(", "))}</td>
-            <td><details><summary class="muted">миссии</summary><div class="muted">${detail || "—"}</div></details></td>
+            <td>${esc(games)}</td>
+            <td><details><summary class="muted">${list.length} мисс.</summary><div class="muted">${detail || "—"}</div></details></td>
           </tr>`;
         })
         .join("");
     }
 
     const rt = $("#runsTable tbody");
+    const unfinished = allRuns.length - runs.length;
+    $("#runsHint").textContent = unfinished
+      ? `Завершено: ${runs.length}. Старых «висящих» без очков: ${unfinished} (можно сбросить день).`
+      : `Завершено миссий: ${runs.length}`;
+
     if (!runs.length) {
       rt.innerHTML =
-        '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-faint)">Нет миссий</td></tr>';
+        '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-faint)">Нет завершённых миссий</td></tr>';
     } else {
       rt.innerHTML = runs
         .slice(0, 300)
         .map((r) => {
-          const t = r.started_at ? new Date(r.started_at).toLocaleString("ru-RU") : "";
-          const done = !!(r.finished_at || (r.score != null && Number(r.score) > 0) || r.duration_ms);
-          const dur = done
-            ? fmtDur(r.duration_ms) +
-              (r.detail && r.detail.aborted ? ' <span class="muted">(выход)</span>' : "")
-            : '<span class="muted">в игре…</span>';
-          return `<tr class="${done ? "" : "run-open"}">
+          const t = (r.finished_at || r.started_at)
+            ? new Date(r.finished_at || r.started_at).toLocaleString("ru-RU")
+            : "";
+          return `<tr>
             <td>${esc(t)}</td>
             <td>${esc(r.nick)}</td>
             <td>${esc(TITLES[r.game_id] || r.game_id)}</td>
-            <td class="score">${done ? r.score ?? 0 : "—"}</td>
-            <td>${dur}</td>
+            <td class="score">${r.score ?? 0}</td>
+            <td>${fmtDur(r.duration_ms)}${r.detail && r.detail.aborted ? ' <span class="muted">(выход)</span>' : ""}</td>
           </tr>`;
         })
         .join("");
     }
+
+    return { attempts, runs, allRuns };
   }
 
-  async function refreshSummary() {
-    const data = await api("summary");
-    $("#dayLabel").textContent = "День: " + (data.day || today());
+  async function refreshSummary(journal) {
+    let attempts = (journal && journal.attempts) || [];
+    let runs = (journal && journal.runs) || [];
+    if (!journal) {
+      const data = await api("journal");
+      attempts = data.attempts || [];
+      runs = (data.runs || []).filter(isFinishedRun);
+    }
+    const liveData = await api("live").catch(() => ({ sessions: [] }));
+    const liveCount = (liveData.sessions || []).length;
+    const s = buildStats(attempts, runs, liveCount);
+    $("#dayLabel").textContent = "День: " + ($("#dayPick")?.value || today());
     $("#summaryCards").innerHTML = `
-      <div class="admin-stat"><b>${data.total || 0}</b><span>попыток</span></div>
-      <div class="admin-stat"><b>${data.avg || 0}</b><span>средний балл</span></div>
-      <div class="admin-stat"><b>${data.best || 0}</b><span>рекорд</span></div>
-      <div class="admin-stat"><b>${data.uniquePlayers || 0}</b><span>игроков</span></div>`;
+      <div class="admin-stat"><b>${s.online}</b><span>онлайн сейчас</span></div>
+      <div class="admin-stat"><b>${s.players}</b><span>игроков за день</span></div>
+      <div class="admin-stat"><b>${s.missions}</b><span>миссий завершено</span></div>
+      <div class="admin-stat"><b>${s.avgMission}</b><span>ср. за миссию</span></div>
+      <div class="admin-stat"><b>${s.bestMission}</b><span>лучшая миссия</span></div>
+      <div class="admin-stat"><b title="${esc(s.bestPlayer)}">${esc(s.bestPlayer)}</b><span>лидер дня</span></div>`;
   }
 
   async function refreshAll() {
     try {
-      await Promise.all([refreshSummary(), refreshLive(), refreshJournal()]);
+      const journal = await refreshJournal();
+      await Promise.all([refreshSummary(journal), refreshLive()]);
     } catch (e) {
       alert("Ошибка: " + (e.message || e));
       if (String(e.message).includes("unauthorized")) {

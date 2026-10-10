@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../css/tokens.css" />
     <link rel="stylesheet" href="../css/base.css" />
     <link rel="stylesheet" href="../css/app.css" />
-    <link rel="stylesheet" href="admin.css?v=6" />
+    <link rel="stylesheet" href="admin.css?v=7" />
   </head>
   <body class="admin-body">
     <div id="loginView" class="admin-login">
@@ -96,7 +96,8 @@
 
         <section class="panel admin-panel">
           <div class="admin-sec-head">
-            <h2>Миссии (время)</h2>
+            <h2>Завершённые миссии</h2>
+            <span class="chip" id="runsHint">—</span>
           </div>
           <div class="admin-table-wrap">
             <table class="jtable" id="runsTable">
@@ -119,6 +120,6 @@
     <script src="../js/config.js"></script>
     <script src="../js/cloud-config.js?v=3"></script>
     <script src="../assets/vendor/supabase.js"></script>
-    <script src="admin.js?v=6"></script>
+    <script src="admin.js?v=7"></script>
   </body>
 </html>

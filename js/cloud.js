@@ -1,16 +1,16 @@
 /* ============================================================
    Облако Supabase: сессии, game_runs, attempts.
-   Если конфиг выключен / нет сети — тихий no-op (остаётся localStorage).
+   Миссии пишутся ТОЛЬКО по завершении (очки + длительность).
+   «Сейчас играют» — из sessions (heartbeat).
    ============================================================ */
 window.Cloud = (function () {
   const cfg = () => window.CloudConfig || {};
   let client = null;
   let sessionId = null;
-  let runId = null;
+  let activeGameId = null;
   let runStarted = 0;
   let beatTimer = null;
   let ready = false;
-  let beginPromise = null;
   let attemptId = null;
   let lastErr = "";
 
@@ -80,6 +80,8 @@ window.Cloud = (function () {
       if (result && result.error) {
         console.warn("[Cloud]", result.error);
         notify(result.error.message || "cloud_error");
+      } else if (result && !result.error) {
+        notify("");
       }
       return result;
     } catch (e) {
@@ -93,8 +95,8 @@ window.Cloud = (function () {
     if (!ready && !init()) return null;
     stopBeat();
     sessionId = null;
-    runId = null;
-    beginPromise = null;
+    activeGameId = null;
+    runStarted = 0;
     attemptId = null;
     const id = uuid();
     const result = await safe(() =>
@@ -109,7 +111,6 @@ window.Cloud = (function () {
     );
     if (!result || result.error) return null;
     sessionId = id;
-    notify("");
     startBeat();
     return sessionId;
   }
@@ -130,85 +131,76 @@ window.Cloud = (function () {
     await heartbeat(patch);
   }
 
+  /** Старт миссии: только статус сессии. Строка в game_runs — после финиша. */
   async function beginGame(nick, gameId) {
     if (!ready || !sessionId) return null;
+    activeGameId = gameId;
     runStarted = Date.now();
-    runId = null;
-    const id = uuid();
-    beginPromise = (async () => {
-      await setStatus("playing", gameId);
-      const result = await safe(() =>
-        client.from("game_runs").insert({
-          id,
-          session_id: sessionId,
-          nick,
-          game_id: gameId,
-          score: 0,
-          started_at: new Date().toISOString(),
-        })
-      );
-      if (!result || result.error) {
-        runId = null;
-        return null;
-      }
-      runId = id;
-      return id;
-    })();
-    return beginPromise;
+    await setStatus("playing", gameId);
+    return gameId;
   }
 
+  /** Финиш: одна полная запись с очками и длительностью. */
   async function endGame(nick, gameId, score, detail) {
     if (!ready || !sessionId) return;
-    if (beginPromise) {
-      try {
-        await beginPromise;
-      } catch (_) {
-        /* ignore */
-      }
-    }
+    const gid = gameId || activeGameId;
     const duration = runStarted ? Math.max(0, Date.now() - runStarted) : null;
-    const payload = {
-      score: Math.max(0, Math.round(score || 0)),
-      finished_at: new Date().toISOString(),
-      duration_ms: duration,
-      detail: detail || {},
-    };
+    const points = Math.max(0, Math.round(Number(score) || 0));
 
-    let ok = false;
-    if (runId) {
-      const r = await safe(() =>
-        client.from("game_runs").update(payload).eq("id", runId)
-      );
-      ok = !!(r && !r.error);
-    }
-    if (!ok) {
-      // догоняем незакрытую миссию этой сессии
-      const r2 = await safe(() =>
-        client
-          .from("game_runs")
-          .update(payload)
-          .eq("session_id", sessionId)
-          .eq("game_id", gameId)
-          .is("finished_at", null)
-      );
-      ok = !!(r2 && !r2.error);
-    }
-    if (!ok) {
+    if (gid) {
       await safe(() =>
         client.from("game_runs").insert({
           id: uuid(),
           session_id: sessionId,
           nick,
-          game_id: gameId,
+          game_id: gid,
+          score: points,
           started_at: new Date(Date.now() - (duration || 0)).toISOString(),
-          ...payload,
+          finished_at: new Date().toISOString(),
+          duration_ms: duration,
+          detail: detail || {},
         })
       );
     }
 
-    runId = null;
+    activeGameId = null;
     runStarted = 0;
-    beginPromise = null;
+  }
+
+  async function syncProgress(snapshot) {
+    if (!ready || !sessionId) return;
+    const row = {
+      session_id: sessionId,
+      nick: snapshot.nick,
+      score: snapshot.score || 0,
+      rank: snapshot.rank || "",
+      finished_at: new Date().toISOString(),
+      games: snapshot.games || [],
+      details: snapshot.details || {},
+    };
+    if (attemptId) {
+      const r = await safe(() =>
+        client.from("attempts").update(row).eq("id", attemptId)
+      );
+      if (r && r.error) {
+        // если UPDATE недоступен — пишем новую строку
+        attemptId = uuid();
+        await safe(() =>
+          client.from("attempts").insert({ id: attemptId, ...row })
+        );
+      }
+    } else {
+      attemptId = uuid();
+      const r = await safe(() =>
+        client.from("attempts").insert({ id: attemptId, ...row })
+      );
+      if (!r || r.error) attemptId = null;
+    }
+    await setStatus(
+      snapshot.status || "hub",
+      snapshot.current_game ?? null,
+      snapshot.score || 0
+    );
   }
 
   async function finishAttempt(attempt) {
@@ -224,43 +216,14 @@ window.Cloud = (function () {
     });
   }
 
-  /** Снимок прогресса в attempts после каждой миссии — журнал и сводка не пустые. */
-  async function syncProgress(snapshot) {
-    if (!ready || !sessionId) return;
-    const row = {
-      session_id: sessionId,
-      nick: snapshot.nick,
-      score: snapshot.score || 0,
-      rank: snapshot.rank || "",
-      finished_at: new Date().toISOString(),
-      games: snapshot.games || [],
-      details: snapshot.details || {},
-    };
-    if (attemptId) {
-      await safe(() => client.from("attempts").update(row).eq("id", attemptId));
-    } else {
-      attemptId = uuid();
-      const r = await safe(() =>
-        client.from("attempts").insert({ id: attemptId, ...row })
-      );
-      if (!r || r.error) attemptId = null;
-    }
-    await setStatus(
-      snapshot.status || "hub",
-      snapshot.current_game ?? null,
-      snapshot.score || 0
-    );
-  }
-
   async function leave() {
     stopBeat();
     if (ready && sessionId) {
       await heartbeat({ status: "left", current_game: null });
     }
     sessionId = null;
-    runId = null;
+    activeGameId = null;
     runStarted = 0;
-    beginPromise = null;
     attemptId = null;
   }
 
