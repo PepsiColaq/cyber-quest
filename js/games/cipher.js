@@ -1,28 +1,28 @@
-/* 05 — Расшифруй сигнал. Шифр Цезаря: смысл = сдвиг букв по алфавиту. */
+/* 05 — Радиоперехват · настрой частоту, пока «каша» не станет словом (Цезарь под капотом). */
 window.GameModules.cipher = function (root, ctx) {
   const E = window.Engine;
   E.intro(
     root,
     {
       id: "cipher",
-      title: "Расшифруй сигнал",
-      kicker: "Крипто · шифр Цезаря",
-      goal: "Буквы сдвинуты по алфавиту на одно и то же число. Подбери сдвиг — и из «каши» получится слово про ИБ.",
+      title: "Радиоперехват",
+      kicker: "Эфир · поймай чистый сигнал",
+      goal: "Крути частоту приёмника. Когда попадёшь в резонанс — из шума проявится слово. Зафиксируй сигнал.",
       rules: [
         {
-          ic: "cipher",
+          ic: "wifi",
           tone: "gold",
-          t: "<b>Смысл:</b> А→Б — сдвиг 1, А→Г — сдвиг 3. Все буквы слова сдвинуты одинаково (классика Цезаря).",
+          t: "Ползунок — <b>частота</b>. Волна становится ровной, а буквы — читаемыми, когда близко к цели.",
         },
         {
           ic: "check",
           tone: "ok",
-          t: "Крути ползунок и смотри правое окно. Когда читается нормальное слово — жми <b>Это оно</b>. Верно: <b>+100</b>.",
+          t: "Индикатор <b>LOCK</b> загорится в зоне. Жми <b>Принять сигнал</b>. Верно: <b>+110</b>.",
         },
         {
           ic: "clock",
           tone: "warn",
-          t: "Три перехвата, на каждый — <b>35 секунд</b>. Подсказка намекает на смысл слова, не на сдвиг.",
+          t: "Три перехвата, на каждый — <b>32 секунды</b>. Есть короткая подсказка по смыслу слова.",
         },
       ],
     },
@@ -42,19 +42,20 @@ window.GameModules.cipher = function (root, ctx) {
         })
         .join("");
     }
-    function dec(str, k) {
+    function scrambleNear(str, noise) {
+      if (noise <= 0.08) return str;
       return [...str]
         .map((ch) => {
-          const i = A.indexOf(ch);
-          return i < 0 ? ch : A[(i - k + N) % N];
+          if (Math.random() > noise) return ch;
+          return A[Math.floor(Math.random() * N)];
         })
         .join("");
     }
 
     const stage = E.buildStage(root, {
       id: "cipher",
-      title: "Расшифруй сигнал",
-      kicker: "Крипто · шифр Цезаря",
+      title: "Радиоперехват",
+      kicker: "Эфир · поймай чистый сигнал",
       rounds: words.length,
       timed: true,
     });
@@ -66,92 +67,179 @@ window.GameModules.cipher = function (root, ctx) {
     function render() {
       stage.setActive(idx);
       const w = words[idx];
-      const shift = 3 + Math.floor(Math.random() * (N - 6));
+      const shift = 4 + Math.floor(Math.random() * (N - 8));
       const cipher = enc(w.text, shift);
-      const demo = "А → " + A[shift % N] + "  ·  пример сдвига";
+      // частота 0..100, цель около 20..85
+      const targetFreq = 18 + Math.floor(Math.random() * 64);
 
       stage.body.innerHTML = "";
       stage.body.appendChild(
         E.el(
           `<div>
-            <div class="q-prompt">Перехват №${idx + 1}: прочитай слово</div>
-            <div class="q-sub">Подсказка по смыслу: ${w.hint}</div>
+            <div class="q-prompt">Перехват ${idx + 1} · настрой частоту</div>
+            <div class="q-sub">Подсказка: ${w.hint}</div>
           </div>`
         )
       );
-      stage.body.appendChild(
-        E.el(
-          `<div class="cipher-teach">Каждая буква сдвинута на <b>одно и то же</b> число позиций по алфавиту.
-          Сейчас: <b class="mono">${demo}</b>. Подбери сдвиг ползунком, пока справа не появится читаемое слово.</div>`
-        )
-      );
 
-      const wrap = E.el(`
-      <div class="cipher-wrap">
-        <div class="cipher-io">
-          <div>
-            <div class="cipher-lab">Зашифровано (перехват)</div>
-            <div class="cipher-box">${cipher}</div>
+      const panel = E.el(`
+        <div class="radio">
+          <div class="radio-glow"></div>
+          <div class="radio-top">
+            <span class="radio-badge">RX · ENC</span>
+            <span class="radio-lock" id="rLock">SEEK</span>
           </div>
-          <div>
-            <div class="cipher-lab">После сдвига (должно читаться)</div>
-            <div class="cipher-box out" id="cOut"></div>
+          <canvas class="radio-wave" id="rWave" width="640" height="120"></canvas>
+          <div class="radio-readout">
+            <div class="radio-lab">Сигнал в эфире</div>
+            <div class="radio-text" id="rText"></div>
           </div>
-        </div>
-        <div class="alpha-wheel" id="cWheel"></div>
-        <div class="cipher-slider">
-          <div class="row" style="justify-content:space-between">
-            <span class="pw-label">Сдвиг (ключ)</span>
-            <span class="cs-val" id="cVal">0</span>
+          <div class="radio-tune">
+            <div class="row" style="justify-content:space-between;width:100%">
+              <span>Частота</span>
+              <span class="mono" id="rMhz">— МГц</span>
+            </div>
+            <input type="range" min="0" max="100" value="0" id="rFreq" />
+            <div class="radio-meter"><i id="rBar"></i></div>
           </div>
-          <input type="range" min="0" max="${N - 1}" value="0" id="cRange" />
-        </div>
-      </div>`);
-      stage.body.appendChild(wrap);
+        </div>`);
+      stage.body.appendChild(panel);
 
       const foot = E.el(
-        `<div class="stage-foot"><span class="chip"><span class="dot"></span> Раунд ${
-          idx + 1
-        } из ${words.length}</span><button class="btn btn-primary" id="cGo">Это оно <span class="i-arrow"></span></button></div>`
+        `<div class="stage-foot">
+          <span class="chip"><span class="dot"></span> Канал ${idx + 1}/${words.length}</span>
+          <button class="btn btn-primary" id="rGo" disabled>Принять сигнал <span class="i-arrow"></span></button>
+        </div>`
       );
       stage.body.appendChild(foot);
       window.hydrateIcons(stage.body);
 
-      const out = wrap.querySelector("#cOut");
-      const val = wrap.querySelector("#cVal");
-      const range = wrap.querySelector("#cRange");
-      const wheel = wrap.querySelector("#cWheel");
-      [...A].forEach((ch) => wheel.appendChild(E.el(`<span>${ch}</span>`)));
+      const canvas = panel.querySelector("#rWave");
+      const ctx2 = canvas.getContext("2d");
+      const textEl = panel.querySelector("#rText");
+      const lockEl = panel.querySelector("#rLock");
+      const bar = panel.querySelector("#rBar");
+      const mhz = panel.querySelector("#rMhz");
+      const range = panel.querySelector("#rFreq");
+      const go = foot.querySelector("#rGo");
+      let phase = 0;
+      let locked = false;
+      let anim = 0;
+
+      function quality(freq) {
+        const d = Math.abs(freq - targetFreq);
+        // 0 = идеально, 1 = далеко
+        return Math.min(1, d / 28);
+      }
+
+      function paint(q) {
+        const wdt = canvas.width;
+        const h = canvas.height;
+        ctx2.clearRect(0, 0, wdt, h);
+        // фон сетки
+        ctx2.strokeStyle = "rgba(88,224,216,0.08)";
+        ctx2.lineWidth = 1;
+        for (let x = 0; x < wdt; x += 32) {
+          ctx2.beginPath();
+          ctx2.moveTo(x, 0);
+          ctx2.lineTo(x, h);
+          ctx2.stroke();
+        }
+        for (let y = 0; y < h; y += 24) {
+          ctx2.beginPath();
+          ctx2.moveTo(0, y);
+          ctx2.lineTo(wdt, y);
+          ctx2.stroke();
+        }
+        const amp = 18 + (1 - q) * 28;
+        const noise = q * 22;
+        const clarity = 1 - q;
+        ctx2.beginPath();
+        ctx2.lineWidth = 2.2;
+        ctx2.strokeStyle =
+          clarity > 0.75
+            ? "rgba(232,195,106,0.95)"
+            : clarity > 0.4
+              ? "rgba(88,224,216,0.85)"
+              : "rgba(120,140,160,0.55)";
+        for (let x = 0; x < wdt; x++) {
+          const t = x * 0.045 + phase;
+          let y =
+            h / 2 +
+            Math.sin(t * (1.2 + clarity * 1.6)) * amp * (0.35 + clarity) +
+            Math.sin(t * 3.1) * amp * 0.25 * clarity;
+          y += (Math.random() - 0.5) * noise;
+          if (x === 0) ctx2.moveTo(x, y);
+          else ctx2.lineTo(x, y);
+        }
+        ctx2.stroke();
+        // glow
+        if (clarity > 0.7) {
+          ctx2.shadowColor = "rgba(232,195,106,0.55)";
+          ctx2.shadowBlur = 12;
+          ctx2.stroke();
+          ctx2.shadowBlur = 0;
+        }
+      }
+
+      function tick() {
+        phase += 0.12 + (1 - quality(+range.value)) * 0.08;
+        paint(quality(+range.value));
+        anim = requestAnimationFrame(tick);
+      }
 
       function update() {
-        const k = +range.value;
-        val.textContent = k;
-        out.textContent = dec(cipher, k);
-        [...wheel.children].forEach((el, i) => {
-          el.classList.toggle("hot", i === k % N);
-        });
+        const freq = +range.value;
+        const q = quality(freq);
+        const clarity = 1 - q;
+        // у цели — чистое слово; иначе шум из перехвата
+        const shown =
+          clarity > 0.82 ? w.text : scrambleNear(cipher, 0.25 + q * 0.75);
+        textEl.textContent = shown;
+        textEl.classList.toggle("hot", clarity > 0.82);
+        mhz.textContent = (88 + freq * 0.2).toFixed(1) + " МГц";
+        bar.style.width = Math.round(clarity * 100) + "%";
+        bar.style.background =
+          clarity > 0.82
+            ? "var(--ok)"
+            : clarity > 0.45
+              ? "var(--gold)"
+              : "var(--danger)";
+        locked = clarity > 0.82;
+        lockEl.textContent = locked ? "LOCK" : clarity > 0.5 ? "SYNC" : "SEEK";
+        lockEl.classList.toggle("on", locked);
+        panel.classList.toggle("locked", locked);
+        go.disabled = !locked;
       }
+
       range.addEventListener("input", update);
       update();
+      anim = requestAnimationFrame(tick);
+
+      function cleanup() {
+        cancelAnimationFrame(anim);
+      }
 
       function submit(timeout) {
         stage.timer.stop();
+        cleanup();
         range.disabled = true;
-        foot.querySelector("#cGo").disabled = true;
-        const ok = out.textContent === w.text;
+        go.disabled = true;
+        const ok = locked || textEl.textContent === w.text;
         if (ok) {
-          score += 100;
+          score += 110;
           correct++;
           stage.dot(idx, "ok");
-          stage.feedback(true, "Слово прочитано!", w.text + " · сдвиг был " + shift);
-          stage.fly(100, foot.querySelector("#cGo"));
+          textEl.textContent = w.text;
+          stage.feedback(true, "Сигнал принят!", w.text);
+          stage.fly(110, go);
         } else {
           stage.dot(idx, "bad");
-          out.textContent = w.text;
+          textEl.textContent = w.text;
           stage.feedback(
             false,
-            timeout ? "Время!" : "Не тот сдвиг",
-            "Нужно было: " + w.text + " (ключ " + shift + ")"
+            timeout ? "Потерян в эфире" : "Не в резонансе",
+            "Нужное слово: " + w.text
           );
         }
         idx++;
@@ -159,11 +247,11 @@ window.GameModules.cipher = function (root, ctx) {
           if (idx >= words.length)
             ctx.done({ score, detail: { correct, total: words.length } });
           else render();
-        }, 1600);
+        }, 1400);
       }
 
-      foot.querySelector("#cGo").addEventListener("click", () => submit(false));
-      stage.timer.start(35, () => submit(true));
+      go.addEventListener("click", () => submit(false));
+      stage.timer.start(32, () => submit(true));
     }
 
     render();
