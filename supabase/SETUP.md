@@ -24,10 +24,17 @@ where id = 1;
 
 ## 3. Ключи API
 
-**Project Settings → API:**
+**Project Settings → API Keys**
 
-- Project URL  
-- `anon` `public` key  
+Нужны **два** значения (не secret!):
+
+1. **Project URL** — сверху страницы, вида `https://abcdefgh.supabase.co`  
+2. **Legacy anon key** — вкладка **«Legacy anon, service_role API keys»** → ключ `anon` `public`  
+   (начинается с `eyJ...`)
+
+Не бери:
+- `sb_publishable_...` — новый формат, наша библиотека его плохо принимает  
+- `sb_secret_...` / `service_role` — **никогда** в сайт, только на сервере  
 
 Открой локально `js/cloud-config.js` и поставь:
 
