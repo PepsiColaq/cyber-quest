@@ -13,6 +13,8 @@ GitHub Pages уже настроен:
 
 **SQL Editor → New query** → вставь весь файл [`schema.sql`](schema.sql) → **Run**.
 
+Если админка пустая, а игроки уже ходят — выполни ещё [`fix-grants.sql`](fix-grants.sql) (права `anon` на таблицы).
+
 Пароль админки по умолчанию: `cyberquest-admin`  
 Сразу смени:
 

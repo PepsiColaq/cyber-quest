@@ -50,12 +50,31 @@ window.Cloud = (function () {
     }, ms);
   }
 
+  let lastErr = "";
+
+  function notify(msg) {
+    lastErr = msg || "";
+    try {
+      window.dispatchEvent(
+        new CustomEvent("cq-cloud", { detail: { ok: !msg, message: msg || "" } })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   async function safe(fn) {
     if (!ready || !client) return null;
     try {
-      return await fn();
+      const result = await fn();
+      if (result && result.error) {
+        console.warn("[Cloud]", result.error);
+        notify(result.error.message || "cloud_error");
+      }
+      return result;
     } catch (e) {
       console.warn("[Cloud]", e);
+      notify(String((e && e.message) || e));
       return null;
     }
   }
@@ -65,21 +84,26 @@ window.Cloud = (function () {
     stopBeat();
     sessionId = null;
     runId = null;
+    const id =
+      (crypto.randomUUID && crypto.randomUUID()) ||
+      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+        const r = (Math.random() * 16) | 0;
+        const v = ch === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
     const result = await safe(() =>
-      client
-        .from("sessions")
-        .insert({
-          nick,
-          status: "hub",
-          current_game: null,
-          total_score: 0,
-          last_seen: new Date().toISOString(),
-        })
-        .select("id")
-        .single()
+      client.from("sessions").insert({
+        id,
+        nick,
+        status: "hub",
+        current_game: null,
+        total_score: 0,
+        last_seen: new Date().toISOString(),
+      })
     );
-    if (!result || result.error || !result.data) return null;
-    sessionId = result.data.id;
+    if (!result || result.error) return null;
+    sessionId = id;
+    notify("");
     startBeat();
     return sessionId;
   }
@@ -105,19 +129,24 @@ window.Cloud = (function () {
     runStarted = Date.now();
     runId = null;
     await setStatus("playing", gameId);
-    const { data } = (await safe(() =>
-      client
-        .from("game_runs")
-        .insert({
-          session_id: sessionId,
-          nick,
-          game_id: gameId,
-          started_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single()
-    )) || { data: null };
-    if (data) runId = data.id;
+    const id =
+      (crypto.randomUUID && crypto.randomUUID()) ||
+      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+        const r = (Math.random() * 16) | 0;
+        const v = ch === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    const result = await safe(() =>
+      client.from("game_runs").insert({
+        id,
+        session_id: sessionId,
+        nick,
+        game_id: gameId,
+        started_at: new Date().toISOString(),
+      })
+    );
+    if (!result || result.error) return null;
+    runId = id;
     return runId;
   }
 
@@ -216,5 +245,6 @@ window.Cloud = (function () {
     finishAttempt,
     leave,
     heartbeat,
+    lastError: () => lastErr,
   };
 })();

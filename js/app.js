@@ -156,17 +156,50 @@ window.App = (function () {
       if (e.key === "Enter") submitNick();
     });
   }
-  function submitNick() {
+  function setCloudStatus(msg, ok) {
+    const el = $("#cloudStatus");
+    if (!el) return;
+    if (!msg) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.classList.toggle("ok", !!ok);
+    el.classList.toggle("bad", !ok);
+    el.textContent = msg;
+  }
+
+  async function submitNick() {
     const v = ($("#nickInput").value || "").trim();
     state.nick = v || "Аноним" + Math.floor(Math.random() * 900 + 100);
     setHud();
-    if (Cloud()) {
-      Cloud().init();
-      Cloud().startSession(state.nick);
-    }
     renderHub();
     show("scrHub");
+    if (Cloud() && Cloud().enabled()) {
+      Cloud().init();
+      const sid = await Cloud().startSession(state.nick);
+      if (sid) {
+        setCloudStatus("Облако: онлайн · видно в админке", true);
+      } else {
+        const err = (Cloud().lastError && Cloud().lastError()) || "";
+        setCloudStatus(
+          err.includes("permission denied") || err.includes("42501")
+            ? "Облако: нет прав на таблицы — выполни supabase/fix-grants.sql"
+            : "Облако: не удалось подключить сессию" + (err ? " (" + err + ")" : ""),
+          false
+        );
+      }
+    } else {
+      setCloudStatus("Облако выключено — только локальный журнал", false);
+    }
   }
+
+  window.addEventListener("cq-cloud", (e) => {
+    const d = (e && e.detail) || {};
+    if (d.ok) setCloudStatus("Облако: онлайн · видно в админке", true);
+    else if (d.message) setCloudStatus("Облако: " + d.message, false);
+  });
 
   /* ---------- Хаб ---------- */
   function renderHub() {
