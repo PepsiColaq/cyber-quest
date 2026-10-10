@@ -383,6 +383,19 @@
 }
 
 /* --- Шифр Цезаря: ползунок + колёса --- */
+.cipher-teach {
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--stroke);
+  background: var(--gold-soft);
+  color: var(--text);
+  font-size: clamp(15px, 1.25vw, 17px);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.cipher-teach b {
+  color: var(--gold);
+}
 .cipher-wrap {
   display: grid;
   gap: 22px;
@@ -391,19 +404,28 @@
   display: grid;
   gap: 12px;
 }
+.cipher-lab {
+  font-size: clamp(13px, 1.1vw, 15px);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
 .cipher-box {
   padding: 16px 18px;
   border-radius: var(--r-md);
   border: 1px solid var(--stroke);
   background: var(--glass-soft);
   font-family: var(--font-mono);
-  font-size: clamp(16px, 2vw, 22px);
-  letter-spacing: 0.12em;
+  font-size: clamp(18px, 2.2vw, 26px);
+  letter-spacing: 0.14em;
   word-break: break-all;
 }
 .cipher-box.out {
   color: var(--gold);
   border-color: var(--stroke-strong);
+  min-height: 1.4em;
 }
 .cipher-slider {
   display: grid;
@@ -671,21 +693,26 @@
   color: var(--cyan);
 }
 
-/* --- Фишинг: кликабельные зоны («лупа инспектора») --- */
+/* --- Фишинг: зоны без подсказки пунктиром (иначе спойлер) --- */
 .mail.magnify .mail-body,
 .mail.magnify .mail-head {
   cursor: default;
 }
 .zone {
-  cursor: zoom-in;
-  border-bottom: 1px dashed var(--text-faint);
-  padding: 0 2px;
-  border-radius: 4px;
-  transition: background var(--dur-2), color var(--dur-2);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 3px;
+  border-bottom: none;
+  text-decoration: none;
+  transition: background var(--dur-2), color var(--dur-2), box-shadow var(--dur-2);
+}
+.zone.link {
+  color: var(--cyan);
+  text-decoration: underline;
 }
 .zone:hover:not(.done) {
-  background: var(--gold-soft);
-  color: var(--text);
+  background: rgba(232, 195, 106, 0.18);
+  box-shadow: 0 0 0 2px rgba(232, 195, 106, 0.25);
 }
 .zone.flag {
   background: var(--danger-soft);
