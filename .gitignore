@@ -6,3 +6,5 @@ Thumbs.db
 .supabase/
 .env
 .env.*
+
+supabase/.temp/
