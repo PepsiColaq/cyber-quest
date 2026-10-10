@@ -1,10 +1,9 @@
-/* Облако выключено, пока не подставишь URL/ключи из Supabase.
-   Инструкция: supabase/SETUP.md
-   Пример: js/cloud-config.example.js */
+/* Ключи проекта cyber-quest. В git можно anon/publishable.
+   НЕ клади сюда sb_secret_ / service_role. */
 window.CloudConfig = {
-  enabled: false,
-  url: "",
-  anonKey: "",
+  enabled: true,
+  url: "https://swdwpsfnvqlrvpxwxwwj.supabase.co",
+  anonKey: "sb_publishable_pJqEnjbaHwMGnb0AXEiEHA_Oi4dKz9x",
   adminFn: "",
   heartbeatMs: 9000,
 };
