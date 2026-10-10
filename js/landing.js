@@ -37,19 +37,82 @@
   fillAdm("#aboutPhone", "phone");
   fillAdm("#aboutMail", "mail");
 
+  /* ---------- Описание миссии ---------- */
+  let giStartHandler = null;
+  function closeGameInfo() {
+    const m = $("#gameInfoModal");
+    if (!m) return;
+    m.classList.remove("show");
+    m.setAttribute("aria-hidden", "true");
+    giStartHandler = null;
+  }
+  function openGameInfo(g, opts) {
+    const m = $("#gameInfoModal");
+    if (!m || !g) return;
+    $("#giNum").textContent = g.num || "";
+    $("#giTitle").textContent = g.title || "";
+    $("#giBlurb").textContent = g.blurb || "";
+    $("#giAbout").textContent = g.about || g.blurb || "";
+    const ic = $("#giIcon");
+    ic.innerHTML = Icons[g.id] || Icons.shield || "";
+    window.hydrateIcons && window.hydrateIcons(ic);
+    const startBtn = $("#giStart");
+    if (opts && typeof opts.onStart === "function") {
+      startBtn.hidden = false;
+      startBtn.innerHTML =
+        (opts.startLabel || "Начать миссию") + ' <span class="i-arrow"></span>';
+      window.hydrateIcons && window.hydrateIcons(startBtn);
+      giStartHandler = opts.onStart;
+    } else {
+      startBtn.hidden = true;
+      giStartHandler = null;
+    }
+    m.classList.add("show");
+    m.setAttribute("aria-hidden", "false");
+  }
+  window.openGameInfo = openGameInfo;
+  window.closeGameInfo = closeGameInfo;
+
+  const giClose = $("#giClose");
+  const giStart = $("#giStart");
+  const giModal = $("#gameInfoModal");
+  if (giClose) giClose.addEventListener("click", closeGameInfo);
+  if (giStart)
+    giStart.addEventListener("click", () => {
+      const fn = giStartHandler;
+      closeGameInfo();
+      if (fn) fn();
+    });
+  if (giModal)
+    giModal.addEventListener("click", (e) => {
+      if (e.target === giModal) closeGameInfo();
+    });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeGameInfo();
+  });
+
   /* ---------- Карточки игр на лендинге ---------- */
   const lg = $("#landingGames");
   if (lg) {
     cfg.games.forEach((g) => {
-      const card = document.createElement("div");
+      const card = document.createElement("button");
+      card.type = "button";
       card.className = "gc panel";
       card.setAttribute("data-reveal", "");
       card.setAttribute("data-tilt", "6");
+      card.setAttribute("aria-label", g.title + ": подробнее");
       card.innerHTML = `
         <div class="gc-num">${g.num}</div>
         <div class="gc-ic">${Icons[g.id] || Icons.shield}</div>
         <h3>${g.title}</h3>
-        <p>${g.blurb}</p>`;
+        <p>${g.blurb}</p>
+        <div class="gc-more">Подробнее →</div>`;
+      card.addEventListener("click", () =>
+        openGameInfo(g, {
+          startLabel: "Начать квест",
+          onStart: () => window.App && window.App.enter(),
+        })
+      );
       lg.appendChild(card);
     });
   }

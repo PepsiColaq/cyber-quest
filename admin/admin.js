@@ -101,21 +101,48 @@
     clearInterval(pollTimer);
   }
 
+  function friendlyErr(e) {
+    const msg = String((e && e.message) || e || "");
+    if (msg === "unauthorized") return "Неверный пароль";
+    if (/Failed to fetch|NetworkError|fetch/i.test(msg))
+      return "Нет связи с облаком. Проверь интернет и Project URL в cloud-config.js (Ctrl+F5).";
+    if (/crypt does not exist/i.test(msg))
+      return "В базе не включён pgcrypto — выполни supabase/fix-pgcrypto.sql";
+    return msg || "Не удалось войти";
+  }
+
   async function doLogin() {
     const err = $("#loginErr");
+    const btn = $("#loginBtn");
     err.textContent = "";
-    password = $("#adminPass").value || "";
+    password = ($("#adminPass").value || "").trim();
     const c = cfg();
     if (!c.enabled || !c.url || !c.anonKey) {
       err.textContent = "Облако выключено. Заполни js/cloud-config.js (см. supabase/SETUP.md).";
       return;
     }
+    if (!password) {
+      err.textContent = "Введи пароль";
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Входим…";
+    }
     try {
-      await api("login");
+      const data = await api("login");
+      if (!data || data.ok !== true) {
+        throw new Error((data && data.error) || "login_failed");
+      }
       sessionStorage.setItem("cq_admin_pass", password);
       showDash();
     } catch (e) {
-      err.textContent = e.message === "unauthorized" ? "Неверный пароль" : String(e.message || e);
+      err.textContent = friendlyErr(e);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Войти";
+      }
     }
   }
 

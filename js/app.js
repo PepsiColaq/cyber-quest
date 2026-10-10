@@ -187,7 +187,16 @@ window.App = (function () {
         </div>
         <h3>${g.title}</h3>
         <p>${g.blurb}</p>`;
-      card.addEventListener("click", () => startGame(g.id, "hub"));
+      card.addEventListener("click", () => {
+        if (window.openGameInfo) {
+          window.openGameInfo(g, {
+            startLabel: "Начать миссию",
+            onStart: () => startGame(g.id, "hub"),
+          });
+        } else {
+          startGame(g.id, "hub");
+        }
+      });
       grid.appendChild(card);
     });
     window.hydrateIcons(grid);

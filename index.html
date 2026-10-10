@@ -367,6 +367,24 @@
     </div>
 
     <!-- ===================== МОДАЛКИ ===================== -->
+    <div class="modal" id="gameInfoModal" aria-hidden="true">
+      <div class="modal-card panel-strong panel gi-card" role="dialog" aria-labelledby="giTitle">
+        <div class="gi-top">
+          <div class="gi-ic" id="giIcon"></div>
+          <span class="gi-num" id="giNum"></span>
+        </div>
+        <h3 id="giTitle"></h3>
+        <p class="gi-blurb" id="giBlurb"></p>
+        <p class="text-dim" id="giAbout"></p>
+        <div class="row gap-sm gi-actions">
+          <button class="btn btn-ghost btn-sm" id="giClose" type="button">Закрыть</button>
+          <button class="btn btn-primary btn-sm" id="giStart" type="button" hidden>
+            Начать миссию <span class="i-arrow"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="pinModal">
       <div class="modal-card panel-strong panel">
         <h3>Режим преподавателя</h3>

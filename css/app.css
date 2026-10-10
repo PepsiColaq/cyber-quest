@@ -229,8 +229,14 @@ body.app-open .skip-btn {
 
 .hub-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(12, 1fr);
   gap: 18px;
+}
+.hub-grid .hub-card {
+  grid-column: span 3;
+}
+.hub-grid .hub-card:nth-child(n + 9) {
+  grid-column: span 4;
 }
 .hub-card {
   position: relative;
@@ -593,9 +599,53 @@ body.app-open .skip-btn {
   .hub-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .hub-grid .hub-card,
+  .hub-grid .hub-card:nth-child(n + 9) {
+    grid-column: auto;
+  }
 }
 @media (max-width: 560px) {
   .hub-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- Карточка миссии (описание) ---------- */
+.gi-card .gi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.gi-card .gi-ic {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+.gi-card .gi-ic svg {
+  width: 28px;
+  height: 28px;
+}
+.gi-card .gi-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  letter-spacing: 0.2em;
+}
+.gi-card .gi-blurb {
+  color: var(--gold);
+  font-size: var(--fs-sm);
+  margin: 0 0 12px;
+}
+.gi-card #giAbout {
+  line-height: 1.55;
+  margin: 0;
+}
+.gi-card .gi-actions {
+  justify-content: flex-end;
+  margin-top: 22px;
 }

@@ -355,8 +355,15 @@ body.snap {
 }
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(12, 1fr);
   gap: 18px;
+}
+.game-grid .gc {
+  grid-column: span 3;
+}
+/* 4+4+3: последний ряд из трёх карточек на всю ширину */
+.game-grid .gc:nth-child(n + 9) {
+  grid-column: span 4;
 }
 .gc {
   position: relative;
@@ -367,7 +374,19 @@ body.snap {
   overflow: hidden;
   transition: transform var(--dur-2) var(--ease), border-color var(--dur-2),
     box-shadow var(--dur-2);
-  cursor: default;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  width: 100%;
+  font: inherit;
+}
+.gc .gc-more {
+  margin-top: 12px;
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  opacity: 0.75;
 }
 .gc::before {
   content: "";
@@ -557,11 +576,22 @@ body.snap {
     order: -1;
     min-height: 320px;
   }
-  .steps,
-  .game-grid {
+  .steps {
     grid-template-columns: 1fr 1fr;
+  }
+  .game-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .game-grid .gc,
+  .game-grid .gc:nth-child(n + 9) {
+    grid-column: auto;
   }
   .l-dots {
     display: none;
+  }
+}
+@media (max-width: 560px) {
+  .game-grid {
+    grid-template-columns: 1fr;
   }
 }
