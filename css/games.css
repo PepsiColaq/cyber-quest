@@ -930,23 +930,37 @@
 .packet {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   cursor: pointer;
   z-index: 3;
+  /* невидимая расширенная зона тапа */
+  touch-action: manipulation;
+}
+.packet::before {
+  content: "";
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
 }
 .packet svg {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
 }
 .packet.mal {
+  width: 64px;
+  height: 64px;
   background: var(--danger-soft);
   color: var(--danger);
-  border: 1px solid var(--danger);
-  box-shadow: 0 0 16px rgba(255, 107, 107, 0.35);
+  border: 2px solid var(--danger);
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.45);
+}
+.packet.mal::before {
+  inset: -22px;
 }
 .packet.ok {
   background: var(--ok-soft);

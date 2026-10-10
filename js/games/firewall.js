@@ -89,7 +89,8 @@ window.GameModules.firewall = function (root, ctx) {
     el.style.left = "98%";
     field.appendChild(el);
     const p = { el, x: 98, mal, dead: false };
-    el.addEventListener("click", () => {
+    function onTap(e) {
+      if (e && e.cancelable) e.preventDefault();
       if (!running || p.dead) return;
       if (p.mal) {
         p.dead = true;
@@ -105,7 +106,8 @@ window.GameModules.firewall = function (root, ctx) {
         el.classList.add("shake");
         E.later(() => el.classList.remove("shake"), 300);
       }
-    });
+    }
+    el.addEventListener("pointerdown", onTap);
     packets.push(p);
   }
 
