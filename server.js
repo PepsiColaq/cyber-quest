@@ -21,11 +21,19 @@ http
   .createServer((req, res) => {
     let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
     if (urlPath === "/") urlPath = "/index.html";
-    const file = path.normalize(path.join(root, urlPath));
+    let file = path.normalize(path.join(root, urlPath));
     if (!file.startsWith(root)) {
       res.writeHead(403);
       res.end("forbidden");
       return;
+    }
+    // каталог → index.html (для /admin/)
+    try {
+      if (fs.existsSync(file) && fs.statSync(file).isDirectory()) {
+        file = path.join(file, "index.html");
+      }
+    } catch (_) {
+      /* ignore */
     }
     fs.readFile(file, (err, data) => {
       if (err) {
