@@ -100,7 +100,6 @@ window.GameModules.cipher = function (root, ctx) {
               <span class="mono" id="rMhz">— МГц</span>
             </div>
             <input type="range" min="0" max="100" value="0" id="rFreq" />
-            <div class="radio-meter"><i id="rBar"></i></div>
           </div>
         </div>`);
       stage.body.appendChild(panel);
@@ -118,7 +117,6 @@ window.GameModules.cipher = function (root, ctx) {
       const ctx2 = canvas.getContext("2d");
       const textEl = panel.querySelector("#rText");
       const lockEl = panel.querySelector("#rLock");
-      const bar = panel.querySelector("#rBar");
       const mhz = panel.querySelector("#rMhz");
       const range = panel.querySelector("#rFreq");
       const go = foot.querySelector("#rGo");
@@ -128,7 +126,6 @@ window.GameModules.cipher = function (root, ctx) {
 
       function quality(freq) {
         const d = Math.abs(freq - targetFreq);
-        // 0 = идеально, 1 = далеко
         return Math.min(1, d / 28);
       }
 
@@ -136,7 +133,6 @@ window.GameModules.cipher = function (root, ctx) {
         const wdt = canvas.width;
         const h = canvas.height;
         ctx2.clearRect(0, 0, wdt, h);
-        // фон сетки
         ctx2.strokeStyle = "rgba(88,224,216,0.08)";
         ctx2.lineWidth = 1;
         for (let x = 0; x < wdt; x += 32) {
@@ -173,7 +169,6 @@ window.GameModules.cipher = function (root, ctx) {
           else ctx2.lineTo(x, y);
         }
         ctx2.stroke();
-        // glow
         if (clarity > 0.7) {
           ctx2.shadowColor = "rgba(232,195,106,0.55)";
           ctx2.shadowBlur = 12;
@@ -192,19 +187,11 @@ window.GameModules.cipher = function (root, ctx) {
         const freq = +range.value;
         const q = quality(freq);
         const clarity = 1 - q;
-        // у цели — чистое слово; иначе шум из перехвата
         const shown =
           clarity > 0.82 ? w.text : scrambleNear(cipher, 0.25 + q * 0.75);
         textEl.textContent = shown;
         textEl.classList.toggle("hot", clarity > 0.82);
         mhz.textContent = (88 + freq * 0.2).toFixed(1) + " МГц";
-        bar.style.width = Math.round(clarity * 100) + "%";
-        bar.style.background =
-          clarity > 0.82
-            ? "var(--ok)"
-            : clarity > 0.45
-              ? "var(--gold)"
-              : "var(--danger)";
         locked = clarity > 0.82;
         lockEl.textContent = locked ? "LOCK" : clarity > 0.5 ? "SYNC" : "SEEK";
         lockEl.classList.toggle("on", locked);
