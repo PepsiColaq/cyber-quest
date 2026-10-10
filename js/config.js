@@ -1,0 +1,86 @@
+window.AppConfig = {
+  collegeName: "Колледж им. Маршала В.И. Чуйкова",
+  directionName:
+    "Обеспечение информационной безопасности автоматизированных систем",
+  phone: "8 (495) 21 21 061",
+  email: "info@marshal-chuikov.ru",
+  teacherPin: "4242",
+  splashMs: 1600,
+  idleResetMs: 120000,
+  storageKey: "chuikov-cyber-quest-v1",
+  quickShift: ["phishing", "passwords", "logs", "incident"],
+  ranks: [
+    { min: 0, title: "Стажёр" },
+    { min: 800, title: "Аналитик" },
+    { min: 1600, title: "Охотник угроз" },
+    { min: 2400, title: "Легенда SOC" },
+  ],
+  games: [
+    {
+      id: "phishing",
+      num: "01",
+      title: "Фишинговый ящик",
+      blurb: "Найди опасные письма",
+    },
+    {
+      id: "passwords",
+      num: "02",
+      title: "Крепость пароля",
+      blurb: "Выбери устойчивый пароль",
+    },
+    {
+      id: "logs",
+      num: "03",
+      title: "Охотник в логах",
+      blurb: "Отметь подозрительные входы",
+    },
+    {
+      id: "incident",
+      num: "04",
+      title: "Реакция на инцидент",
+      blurb: "Прими верное решение",
+    },
+    {
+      id: "cipher",
+      num: "05",
+      title: "Расшифруй сигнал",
+      blurb: "Прочитай перехват",
+    },
+    {
+      id: "network",
+      num: "06",
+      title: "Собери безопасную сеть",
+      blurb: "Закрой дыры защиты",
+    },
+    {
+      id: "social",
+      num: "07",
+      title: "Социальный инженер",
+      blurb: "Не выдай секрет",
+    },
+    {
+      id: "detective",
+      num: "08",
+      title: "Цифровой детектив",
+      blurb: "Собери цепочку утечки",
+    },
+    {
+      id: "patches",
+      num: "09",
+      title: "Гонка патчей",
+      blurb: "Закрой уязвимости вовремя",
+    },
+    {
+      id: "firewall",
+      num: "10",
+      title: "Файрвол",
+      blurb: "Отрази атаку на ядро",
+    },
+    {
+      id: "attackmap",
+      num: "11",
+      title: "Карта кибератак",
+      blurb: "Нейтрализуй источники",
+    },
+  ],
+};

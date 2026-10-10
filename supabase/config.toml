@@ -1,0 +1,5 @@
+# Минимальный конфиг для Supabase CLI (опционально).
+# project_id подставится после `supabase link`.
+
+[functions.admin-api]
+verify_jwt = false

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>КиберКвест · Колледж им. Маршала В.И. Чуйкова</title>
+    <link rel="icon" href="assets/logo-chuikov.png" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/landing.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/games.css" />
+  </head>
+  <body>
+    <!-- ===================== SPLASH ===================== -->
+    <div id="splash">
+      <div class="splash-inner">
+        <img
+          class="splash-logo"
+          src="assets/logo-chuikov.png"
+          alt="Логотип колледжа"
+        />
+        <div class="splash-ring"><i></i></div>
+        <div class="splash-title">Загрузка киберквеста</div>
+      </div>
+    </div>
+
+    <!-- ===================== ЛЕНДИНГ ===================== -->
+    <div class="l-progress" id="lProgress"></div>
+
+    <header class="l-top" id="lTop">
+      <div class="l-brand">
+        <img src="assets/logo-chuikov.png" alt="" />
+        <div>
+          <b>Колледж им. Маршала В.И. Чуйкова</b>
+          <span>Информационная безопасность</span>
+        </div>
+      </div>
+      <div class="l-actions">
+        <button class="btn btn-ghost btn-sm" id="skipBtn">Пропустить</button>
+        <button class="btn btn-primary btn-sm" id="topStart">
+          Начать <span class="i-arrow"></span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="l-dots" id="lDots" aria-label="Навигация по секциям"></nav>
+
+    <main id="landing">
+      <!-- 1 — Герой -->
+      <section class="snap-sec" id="s-hero" data-sec="0">
+        <div class="container hero">
+          <div class="hero-copy">
+            <span class="eyebrow" data-reveal>День открытых дверей · 2026</span>
+            <h1 data-reveal data-reveal-delay="80">
+              Стань <em>цифровым</em> защитником за&nbsp;5&nbsp;минут
+            </h1>
+            <p class="hero-lead" data-reveal data-reveal-delay="160">
+              Интерактивный киберквест направления «Обеспечение информационной
+              безопасности автоматизированных систем». Одиннадцать мини-игр,
+              настоящие сценарии SOC — без скучных лекций.
+            </p>
+            <div class="hero-cta" data-reveal data-reveal-delay="240">
+              <button class="btn btn-primary btn-lg" id="heroStart">
+                Начать квест <span class="i-arrow"></span>
+              </button>
+              <button class="btn btn-ghost btn-lg" id="heroScroll">
+                Как это работает
+              </button>
+            </div>
+            <div class="hero-meta" data-reveal data-reveal-delay="320">
+              <div class="m">
+                <b data-count="11">11</b><span>мини-игр</span>
+              </div>
+              <div class="m">
+                <b data-count="5" data-suffix=" мин">5 мин</b
+                ><span>быстрая смена</span>
+              </div>
+              <div class="m">
+                <b data-count="10" data-suffix="/10">10/10</b
+                ><span>топ лидеров</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual">
+            <div class="orb-glow" data-parallax="0.05"></div>
+            <div class="orb-ring r2"><span class="sat"></span></div>
+            <div class="orb-ring r1"><span class="sat"></span></div>
+            <div class="hero-orb-wrap">
+              <img
+                class="hero-orb"
+                src="assets/logo-chuikov.png"
+                alt="Эмблема колледжа"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="scroll-hint">
+          <div class="mouse"></div>
+          Листай вниз
+        </div>
+      </section>
+
+      <!-- 2 — Что это -->
+      <section class="snap-sec" id="s-how" data-sec="1">
+        <div class="container games-wrap">
+          <div class="sec-head">
+            <span class="eyebrow" data-reveal>Как это работает</span>
+            <h2 data-reveal data-reveal-delay="80">
+              Три шага до звания «Легенда SOC»
+            </h2>
+            <p data-reveal data-reveal-delay="160">
+              Коротко, по-честному и в твоём темпе. Можно пройти всё — или
+              включить быструю смену из четырёх игр.
+            </p>
+          </div>
+          <div class="steps" data-reveal-group>
+            <div class="step panel" data-reveal>
+              <div class="ic i-user"></div>
+              <div class="num">01</div>
+              <h3>Придумай позывной</h3>
+              <p>
+                Без фамилий и телефонов — только игровой ник. Он попадёт в
+                таблицу лидеров.
+              </p>
+            </div>
+            <div class="step panel" data-reveal>
+              <div class="ic i-target"></div>
+              <div class="num">02</div>
+              <h3>Проходи мини-игры</h3>
+              <p>
+                Фишинг, пароли, логи, инциденты, шифры. Каждая — отдельный
+                реальный навык специалиста по ИБ.
+              </p>
+            </div>
+            <div class="step panel" data-reveal>
+              <div class="ic i-trophy"></div>
+              <div class="num">03</div>
+              <h3>Забери свой ранг</h3>
+              <p>
+                Набирай очки, поднимайся по рангам и борись за место в топ-10
+                дня открытых дверей.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 — Игры -->
+      <section class="snap-sec" id="s-games" data-sec="2">
+        <div class="container games-wrap">
+          <div class="sec-head">
+            <span class="eyebrow" data-reveal>Арсенал</span>
+            <h2 data-reveal data-reveal-delay="80">Одиннадцать испытаний</h2>
+            <p data-reveal data-reveal-delay="160">
+              Каждая игра — безопасная симуляция. Никакого реального взлома, только
+              мышление защитника.
+            </p>
+          </div>
+          <div class="game-grid" id="landingGames" data-reveal-group></div>
+        </div>
+      </section>
+
+      <!-- 4 — Направление -->
+      <section class="snap-sec" id="s-dir" data-sec="3">
+        <div class="container">
+          <div class="dir">
+            <div>
+              <span class="eyebrow" data-reveal>О направлении</span>
+              <h2 class="sec-head" data-reveal data-reveal-delay="80" style="margin-bottom: 16px">
+                Обеспечение информационной безопасности
+              </h2>
+              <p class="text-dim" data-reveal data-reveal-delay="140">
+                Готовим специалистов, которые защищают данные, сети и
+                автоматизированные системы. Практика на реальных кейсах,
+                современные лаборатории и востребованная профессия.
+              </p>
+              <ul class="dir-list" data-reveal-group>
+                <li data-reveal>
+                  <span class="tick i-check"></span>Защита сетей и
+                  операционных систем
+                </li>
+                <li data-reveal>
+                  <span class="tick i-check"></span>Криптография и анализ
+                  угроз
+                </li>
+                <li data-reveal>
+                  <span class="tick i-check"></span>Реагирование на инциденты
+                  (SOC)
+                </li>
+                <li data-reveal>
+                  <span class="tick i-check"></span>Востребованность и высокий
+                  старт зарплаты
+                </li>
+              </ul>
+            </div>
+            <div class="dir-stats" data-reveal-group>
+              <div class="stat panel" data-reveal>
+                <b data-count="11">11</b><span>мини-игр в квесте</span>
+              </div>
+              <div class="stat panel" data-reveal>
+                <b data-count="100" data-suffix="%">100%</b
+                ><span>практики на кейсах</span>
+              </div>
+              <div class="stat panel" data-reveal>
+                <b data-count="4">4</b><span>ранга мастерства</span>
+              </div>
+              <div class="stat panel" data-reveal>
+                <b data-count="1" data-prefix="№">№1</b
+                ><span>в твоём будущем</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 — Финал -->
+      <section class="snap-sec" id="s-start" data-sec="4">
+        <div class="container finale">
+          <div class="finale-card panel-strong panel" data-reveal="zoom">
+            <span class="eyebrow" style="justify-content: center">Поехали</span>
+            <h2>Готов проверить себя?</h2>
+            <p>
+              Пять минут — и ты узнаешь, на что способен цифровой защитник.
+              Поставь рекорд дня и забери место в топе.
+            </p>
+            <div class="hero-cta">
+              <button class="btn btn-primary btn-lg" id="finaleStart">
+                Начать квест <span class="i-arrow"></span>
+              </button>
+            </div>
+            <div class="admissions">
+              <a id="admPhone" href="#"><span class="i-phone"></span><span class="t"></span></a>
+              <a id="admMail" href="#"><span class="i-mail"></span><span class="t"></span></a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===================== ПРИЛОЖЕНИЕ ===================== -->
+    <div id="app">
+      <div class="topbar">
+        <div class="tb-brand" id="tbHome">
+          <img src="assets/logo-chuikov.png" alt="" />
+          <b>КиберКвест</b>
+        </div>
+        <div class="tb-right">
+          <div class="hud" id="hud"></div>
+          <button class="btn btn-ghost btn-sm tb-back" id="btnBack" type="button" hidden>
+            <span class="i-back"></span> Назад
+          </button>
+        </div>
+      </div>
+
+      <!-- Экран: ник -->
+      <section class="screen" id="scrNick">
+        <div class="container">
+          <div class="nick-wrap">
+            <span class="i-user" style="color: var(--gold); display: inline-block; width: 46px; height: 46px"></span>
+            <h2>Твой позывной</h2>
+            <p>Придумай игровое имя — оно появится в таблице лидеров. Личные данные не нужны.</p>
+            <input
+              class="nick-input"
+              id="nickInput"
+              maxlength="14"
+              placeholder="напр. N30N"
+              autocomplete="off"
+            />
+            <div class="nick-suggest" id="nickSuggest"></div>
+            <button class="btn btn-primary btn-lg" id="nickGo">
+              В штаб <span class="i-arrow"></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Экран: хаб -->
+      <section class="screen" id="scrHub">
+        <div class="container">
+          <div class="hub-head">
+            <div>
+              <h2>Штаб операций</h2>
+              <p id="hubSub">Выбирай миссию. Можно в любом порядке.</p>
+            </div>
+            <div class="row gap-sm">
+              <button class="btn btn-ghost btn-sm" id="toLeaders">
+                <span class="i-trophy"></span> Лидеры
+              </button>
+              <button class="btn btn-ghost btn-sm" id="toAbout">О направлении</button>
+            </div>
+          </div>
+
+          <div class="quick-banner" data-reveal>
+            <div class="qb-ic i-bolt"></div>
+            <div class="qb-txt">
+              <b>Быстрая смена</b>
+              <span>4 коротких игры примерно за 5 минут — идеально для очереди на стенде.</span>
+            </div>
+            <button class="btn btn-primary" id="quickStart">
+              Запустить <span class="i-arrow"></span>
+            </button>
+          </div>
+
+          <div class="hub-grid" id="hubGrid" data-reveal-group></div>
+        </div>
+      </section>
+
+      <!-- Экран: игра -->
+      <section class="screen" id="scrGame">
+        <div class="container">
+          <div class="stage" id="gameStage"></div>
+        </div>
+      </section>
+
+      <!-- Экран: итоги -->
+      <section class="screen" id="scrResult">
+        <div class="container">
+          <div class="result-wrap" id="resultWrap"></div>
+        </div>
+      </section>
+
+      <!-- Экран: лидеры -->
+      <section class="screen" id="scrLeaders">
+        <div class="container">
+          <div class="leaders">
+            <h2>Таблица лидеров дня</h2>
+            <div id="leadersList"></div>
+            <div class="center" style="margin-top: 24px">
+              <button class="btn btn-ghost" id="leadersBack">
+                <span class="i-back"></span> В штаб
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Экран: о направлении -->
+      <section class="screen" id="scrAbout">
+        <div class="container">
+          <div class="about">
+            <span class="eyebrow">Направление</span>
+            <h2>Обеспечение информационной безопасности автоматизированных систем</h2>
+            <p>
+              Это специалисты, которые проектируют защиту, находят уязвимости,
+              расследуют инциденты и обеспечивают работу критичных систем. Ты
+              только что примерил эту роль в игре.
+            </p>
+            <p>
+              На направлении — практика на современных стендах, криптография,
+              защита сетей, реагирование на инциденты и реальные кейсы из работы
+              SOC-центров.
+            </p>
+            <div class="admissions" style="justify-content: flex-start">
+              <a id="aboutPhone" href="#"><span class="i-phone"></span><span class="t"></span></a>
+              <a id="aboutMail" href="#"><span class="i-mail"></span><span class="t"></span></a>
+            </div>
+            <div class="center" style="margin-top: 28px">
+              <button class="btn btn-ghost" id="aboutBack">
+                <span class="i-back"></span> В штаб
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================== МОДАЛКИ ===================== -->
+    <div class="modal" id="pinModal">
+      <div class="modal-card panel-strong panel">
+        <h3>Режим преподавателя</h3>
+        <p class="text-dim">Введите PIN для доступа к журналу попыток.</p>
+        <input class="pin-input" id="pinInput" type="password" inputmode="numeric" maxlength="6" />
+        <div class="pin-err" id="pinErr"></div>
+        <div class="row gap-sm" style="justify-content: flex-end">
+          <button class="btn btn-ghost btn-sm" id="pinCancel">Отмена</button>
+          <button class="btn btn-primary btn-sm" id="pinGo">Войти</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="teacherModal">
+      <div class="modal-card wide panel-strong panel">
+        <div class="teacher-head">
+          <h3>Журнал попыток</h3>
+          <div class="row gap-sm">
+            <button class="btn btn-ghost btn-sm" id="teacherCsv">
+              <span class="i-download"></span> Экспорт CSV
+            </button>
+            <button class="btn btn-ghost btn-sm" id="teacherReset">Сбросить день</button>
+            <button class="btn btn-ghost btn-sm" id="teacherClose">
+              <span class="i-close"></span>
+            </button>
+          </div>
+        </div>
+        <div class="teacher-stats" id="teacherStats"></div>
+        <p class="hint" id="teacherCloudLink" hidden style="margin: 0 0 14px">
+          <span class="i-info"></span>
+          <span
+            >Облачный журнал (live-сессии):
+            <a href="admin/" style="color: var(--gold)">открыть админку →</a></span
+          >
+        </p>
+        <div style="overflow: hidden; border-radius: var(--r-md); border: 1px solid var(--stroke)">
+          <table class="jtable" id="teacherTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="feedback" id="feedback">
+      <div class="fb-ic"></div>
+      <div><b id="fbTitle"></b> <span id="fbText"></span></div>
+    </div>
+
+    <!-- ===================== СКРИПТЫ ===================== -->
+    <script src="js/config.js"></script>
+    <script src="js/cloud-config.js"></script>
+    <script src="assets/vendor/supabase.js"></script>
+    <script src="js/cloud.js"></script>
+    <script src="js/icons.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/motion.js"></script>
+    <script src="js/games/engine.js"></script>
+    <script src="js/banks.js"></script>
+    <script src="js/games/phishing.js"></script>
+    <script src="js/games/passwords.js"></script>
+    <script src="js/games/logs.js"></script>
+    <script src="js/games/incident.js"></script>
+    <script src="js/games/cipher.js"></script>
+    <script src="js/games/network.js"></script>
+    <script src="js/games/social.js"></script>
+    <script src="js/games/detective.js"></script>
+    <script src="js/games/patches.js"></script>
+    <script src="js/games/firewall.js"></script>
+    <script src="js/games/attackmap.js"></script>
+    <script src="js/landing.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

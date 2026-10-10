@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Админка · КиберКвест</title>
+    <link rel="icon" href="../assets/logo-chuikov.png" />
+    <link rel="stylesheet" href="../css/fonts.css" />
+    <link rel="stylesheet" href="../css/tokens.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/app.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body class="admin-body">
+    <div id="loginView" class="admin-login">
+      <div class="panel panel-strong admin-card">
+        <img src="../assets/logo-chuikov.png" alt="" class="admin-logo" />
+        <h1>Админка КиберКвест</h1>
+        <p>Только для преподавателя. Пароль задаётся в Supabase Secrets.</p>
+        <input
+          class="nick-input"
+          id="adminPass"
+          type="password"
+          placeholder="Пароль администратора"
+          autocomplete="current-password"
+        />
+        <div class="admin-err" id="loginErr"></div>
+        <button class="btn btn-primary btn-lg" id="loginBtn" type="button">Войти</button>
+        <a class="admin-back" href="../">← К игре</a>
+      </div>
+    </div>
+
+    <div id="dashView" class="admin-dash" hidden>
+      <header class="admin-top">
+        <div class="admin-brand">
+          <img src="../assets/logo-chuikov.png" alt="" />
+          <div>
+            <b>КиберКвест · Админ</b>
+            <span id="dayLabel"></span>
+          </div>
+        </div>
+        <div class="row gap-sm">
+          <input type="date" id="dayPick" class="admin-date" />
+          <button class="btn btn-ghost btn-sm" id="btnRefresh" type="button">Обновить</button>
+          <button class="btn btn-ghost btn-sm" id="btnCsv" type="button">CSV</button>
+          <button class="btn btn-ghost btn-sm" id="btnReset" type="button">Сброс дня</button>
+          <button class="btn btn-ghost btn-sm" id="btnLogout" type="button">Выйти</button>
+        </div>
+      </header>
+
+      <main class="admin-main">
+        <section class="admin-stats" id="summaryCards"></section>
+
+        <section class="panel admin-panel">
+          <div class="admin-sec-head">
+            <h2>Сейчас играют</h2>
+            <span class="chip" id="liveCount">0 online</span>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="jtable" id="liveTable">
+              <thead>
+                <tr>
+                  <th>Позывной</th>
+                  <th>Статус</th>
+                  <th>Игра</th>
+                  <th>Очки</th>
+                  <th>В сессии</th>
+                  <th>Heartbeat</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel admin-panel">
+          <div class="admin-sec-head">
+            <h2>Журнал попыток</h2>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="jtable" id="journalTable">
+              <thead>
+                <tr>
+                  <th>Время</th>
+                  <th>Позывной</th>
+                  <th>Очки</th>
+                  <th>Ранг</th>
+                  <th>Игры</th>
+                  <th>Детали</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel admin-panel">
+          <div class="admin-sec-head">
+            <h2>Миссии (время)</h2>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="jtable" id="runsTable">
+              <thead>
+                <tr>
+                  <th>Время</th>
+                  <th>Позывной</th>
+                  <th>Игра</th>
+                  <th>Очки</th>
+                  <th>Длительность</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/cloud-config.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>
