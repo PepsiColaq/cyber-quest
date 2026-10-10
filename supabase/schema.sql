@@ -2,7 +2,7 @@
 -- Выполнить в SQL Editor проекта Supabase (один раз).
 -- После выполнения смени пароль админки (см. ниже).
 
-create extension if not exists "pgcrypto";
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------- sessions (живые игроки) ----------
 create table if not exists public.sessions (
@@ -57,11 +57,11 @@ create table if not exists public.admin_secrets (
 
 -- Пароль по умолчанию: cyberquest-admin (СМЕНИ сразу после установки!)
 insert into public.admin_secrets (id, password_hash)
-values (1, crypt('cyberquest-admin', gen_salt('bf')))
+values (1, extensions.crypt('cyberquest-admin', extensions.gen_salt('bf')))
 on conflict (id) do nothing;
 
 -- Сменить пароль позже:
--- update public.admin_secrets set password_hash = crypt('НОВЫЙ_ПАРОЛЬ', gen_salt('bf')) where id = 1;
+-- update public.admin_secrets set password_hash = extensions.crypt('НОВЫЙ_ПАРОЛЬ', extensions.gen_salt('bf')) where id = 1;
 
 -- ---------- RLS ----------
 alter table public.sessions enable row level security;
@@ -101,7 +101,7 @@ create or replace function public.admin_api(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   ok boolean;
@@ -114,7 +114,7 @@ declare
   best int;
   uniq int;
 begin
-  select (password_hash = crypt(p_password, password_hash)) into ok
+  select (password_hash = extensions.crypt(p_password, password_hash)) into ok
   from public.admin_secrets where id = 1;
 
   if coalesce(ok, false) is not true then
