@@ -61,8 +61,64 @@ window.GameModules.patches = function (root, ctx) {
     missed = 0,
     running = true;
   const timers = new Set();
+  const active = new Set();
   const pPatched = hud.querySelector("#pPatched");
   const pMiss = hud.querySelector("#pMiss");
+  const PAD = 10; // px gap between chips
+
+  function chipRect(el) {
+    const a = el.getBoundingClientRect();
+    const f = field.getBoundingClientRect();
+    return {
+      left: a.left - f.left,
+      top: a.top - f.top,
+      right: a.right - f.left,
+      bottom: a.bottom - f.top,
+    };
+  }
+
+  function overlaps(a, b) {
+    return !(
+      a.right + PAD < b.left ||
+      a.left > b.right + PAD ||
+      a.bottom + PAD < b.top ||
+      a.top > b.bottom + PAD
+    );
+  }
+
+  function placeFree(chip) {
+    const f = field.getBoundingClientRect();
+    if (f.width < 40 || f.height < 40) return false;
+    field.appendChild(chip);
+    // measure natural size once (off-field left/top still layout)
+    chip.style.visibility = "hidden";
+    chip.style.left = "0";
+    chip.style.top = "0";
+    const w = chip.offsetWidth;
+    const h = chip.offsetHeight;
+    const maxX = Math.max(0, f.width - w - 8);
+    const maxY = Math.max(0, f.height - h - 8);
+    for (let attempt = 0; attempt < 36; attempt++) {
+      const x = 4 + Math.random() * maxX;
+      const y = 4 + Math.random() * maxY;
+      chip.style.left = x + "px";
+      chip.style.top = y + "px";
+      const mine = chipRect(chip);
+      let free = true;
+      for (const other of active) {
+        if (overlaps(mine, chipRect(other))) {
+          free = false;
+          break;
+        }
+      }
+      if (free) {
+        chip.style.visibility = "";
+        return true;
+      }
+    }
+    chip.remove();
+    return false;
+  }
 
   function spawn() {
     if (!running) return;
@@ -75,11 +131,8 @@ window.GameModules.patches = function (root, ctx) {
         isSafe ? E.Icons.check : E.Icons.bolt
       }</span>${label}</div>`
     );
-    const x = 6 + Math.random() * 74;
-    const y = 12 + Math.random() * 70;
-    chip.style.left = x + "%";
-    chip.style.top = y + "%";
-    field.appendChild(chip);
+    if (!placeFree(chip)) return;
+    active.add(chip);
 
     const life = E.later(() => {
       if (!chip.isConnected) return;
@@ -87,11 +140,13 @@ window.GameModules.patches = function (root, ctx) {
         missed++;
         pMiss.textContent = missed;
       }
+      active.delete(chip);
       chip.remove();
     }, 2200);
     timers.add(life);
 
-    chip.addEventListener("click", () => {
+    chip.addEventListener("pointerdown", (e) => {
+      if (e && e.cancelable) e.preventDefault();
       if (!running) return;
       if (isSafe) {
         score -= 20;
@@ -103,6 +158,7 @@ window.GameModules.patches = function (root, ctx) {
         pPatched.textContent = patched;
         stage.fly(35, chip);
       }
+      active.delete(chip);
       chip.remove();
     });
   }
