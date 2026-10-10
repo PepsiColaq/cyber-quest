@@ -193,6 +193,16 @@ body.app-open .skip-btn {
   color: var(--text-dim);
   margin-top: 8px;
 }
+.cloud-status {
+  font-size: var(--fs-sm);
+  font-family: var(--font-mono);
+}
+.cloud-status.ok {
+  color: var(--ok);
+}
+.cloud-status.bad {
+  color: var(--danger);
+}
 .quick-banner {
   display: flex;
   align-items: center;
