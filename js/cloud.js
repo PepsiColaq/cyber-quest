@@ -10,10 +10,22 @@ window.Cloud = (function () {
   let runStarted = 0;
   let beatTimer = null;
   let ready = false;
+  let beginPromise = null;
+  let attemptId = null;
+  let lastErr = "";
 
   function enabled() {
     const c = cfg();
     return !!(c.enabled && c.url && c.anonKey && window.supabase);
+  }
+
+  function uuid() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+      const r = (Math.random() * 16) | 0;
+      const v = ch === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
 
   function init() {
@@ -50,8 +62,6 @@ window.Cloud = (function () {
     }, ms);
   }
 
-  let lastErr = "";
-
   function notify(msg) {
     lastErr = msg || "";
     try {
@@ -84,13 +94,9 @@ window.Cloud = (function () {
     stopBeat();
     sessionId = null;
     runId = null;
-    const id =
-      (crypto.randomUUID && crypto.randomUUID()) ||
-      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
-        const r = (Math.random() * 16) | 0;
-        const v = ch === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      });
+    beginPromise = null;
+    attemptId = null;
+    const id = uuid();
     const result = await safe(() =>
       client.from("sessions").insert({
         id,
@@ -128,76 +134,122 @@ window.Cloud = (function () {
     if (!ready || !sessionId) return null;
     runStarted = Date.now();
     runId = null;
-    await setStatus("playing", gameId);
-    const id =
-      (crypto.randomUUID && crypto.randomUUID()) ||
-      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
-        const r = (Math.random() * 16) | 0;
-        const v = ch === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      });
-    const result = await safe(() =>
-      client.from("game_runs").insert({
-        id,
-        session_id: sessionId,
-        nick,
-        game_id: gameId,
-        started_at: new Date().toISOString(),
-      })
-    );
-    if (!result || result.error) return null;
-    runId = id;
-    return runId;
+    const id = uuid();
+    beginPromise = (async () => {
+      await setStatus("playing", gameId);
+      const result = await safe(() =>
+        client.from("game_runs").insert({
+          id,
+          session_id: sessionId,
+          nick,
+          game_id: gameId,
+          score: 0,
+          started_at: new Date().toISOString(),
+        })
+      );
+      if (!result || result.error) {
+        runId = null;
+        return null;
+      }
+      runId = id;
+      return id;
+    })();
+    return beginPromise;
   }
 
   async function endGame(nick, gameId, score, detail) {
     if (!ready || !sessionId) return;
-    const duration = runStarted ? Date.now() - runStarted : null;
+    if (beginPromise) {
+      try {
+        await beginPromise;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    const duration = runStarted ? Math.max(0, Date.now() - runStarted) : null;
+    const payload = {
+      score: Math.max(0, Math.round(score || 0)),
+      finished_at: new Date().toISOString(),
+      duration_ms: duration,
+      detail: detail || {},
+    };
+
+    let ok = false;
     if (runId) {
-      await safe(() =>
+      const r = await safe(() =>
+        client.from("game_runs").update(payload).eq("id", runId)
+      );
+      ok = !!(r && !r.error);
+    }
+    if (!ok) {
+      // догоняем незакрытую миссию этой сессии
+      const r2 = await safe(() =>
         client
           .from("game_runs")
-          .update({
-            score: score || 0,
-            finished_at: new Date().toISOString(),
-            duration_ms: duration,
-            detail: detail || {},
-          })
-          .eq("id", runId)
+          .update(payload)
+          .eq("session_id", sessionId)
+          .eq("game_id", gameId)
+          .is("finished_at", null)
       );
-    } else {
+      ok = !!(r2 && !r2.error);
+    }
+    if (!ok) {
       await safe(() =>
         client.from("game_runs").insert({
+          id: uuid(),
           session_id: sessionId,
           nick,
           game_id: gameId,
-          score: score || 0,
           started_at: new Date(Date.now() - (duration || 0)).toISOString(),
-          finished_at: new Date().toISOString(),
-          duration_ms: duration,
-          detail: detail || {},
+          ...payload,
         })
       );
     }
+
     runId = null;
     runStarted = 0;
-    await setStatus("hub", null);
+    beginPromise = null;
   }
 
   async function finishAttempt(attempt) {
     if (!ready || !sessionId) return;
-    await safe(() =>
-      client.from("attempts").insert({
-        session_id: sessionId,
-        nick: attempt.nick,
-        score: attempt.score || 0,
-        rank: attempt.rank || "",
-        finished_at: new Date().toISOString(),
-        games: attempt.games || [],
-        details: attempt.details || {},
-      })
+    await syncProgress({
+      nick: attempt.nick,
+      score: attempt.score || 0,
+      rank: attempt.rank || "",
+      games: attempt.games || [],
+      details: attempt.details || {},
+      status: "done",
+      current_game: null,
+    });
+  }
+
+  /** Снимок прогресса в attempts после каждой миссии — журнал и сводка не пустые. */
+  async function syncProgress(snapshot) {
+    if (!ready || !sessionId) return;
+    const row = {
+      session_id: sessionId,
+      nick: snapshot.nick,
+      score: snapshot.score || 0,
+      rank: snapshot.rank || "",
+      finished_at: new Date().toISOString(),
+      games: snapshot.games || [],
+      details: snapshot.details || {},
+    };
+    if (attemptId) {
+      await safe(() => client.from("attempts").update(row).eq("id", attemptId));
+    } else {
+      attemptId = uuid();
+      const r = await safe(() =>
+        client.from("attempts").insert({ id: attemptId, ...row })
+      );
+      if (!r || r.error) attemptId = null;
+    }
+    await setStatus(
+      snapshot.status || "hub",
+      snapshot.current_game ?? null,
+      snapshot.score || 0
     );
-    await setStatus("done", null, attempt.score || 0);
   }
 
   async function leave() {
@@ -208,18 +260,18 @@ window.Cloud = (function () {
     sessionId = null;
     runId = null;
     runStarted = 0;
+    beginPromise = null;
+    attemptId = null;
   }
 
   function isOnline() {
     return ready && !!sessionId;
   }
 
-  // init lazily; also bind unload
   if (typeof window !== "undefined") {
     window.addEventListener("beforeunload", () => {
       if (!ready || !sessionId || !client) return;
       try {
-        // best-effort beacon-style update
         client
           .from("sessions")
           .update({
@@ -243,6 +295,7 @@ window.Cloud = (function () {
     beginGame,
     endGame,
     finishAttempt,
+    syncProgress,
     leave,
     heartbeat,
     lastError: () => lastErr,

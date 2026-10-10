@@ -90,6 +90,14 @@ drop policy if exists game_runs_update_anon on public.game_runs;
 create policy game_runs_update_anon on public.game_runs
   for update to anon using (true) with check (true);
 
+drop policy if exists attempts_update_anon on public.attempts;
+create policy attempts_update_anon on public.attempts
+  for update to anon using (true) with check (true);
+
+drop policy if exists attempts_select_anon on public.attempts;
+create policy attempts_select_anon on public.attempts
+  for select to anon using (true);
+
 -- admin_secrets: нет политик для anon → читать нельзя напрямую
 
 -- ---------- RPC админки (без Edge Function / CLI) ----------
@@ -134,7 +142,7 @@ begin
       into result
     from (
       select * from public.sessions
-      where last_seen >= now() - interval '45 seconds'
+      where last_seen >= now() - interval '3 minutes'
         and status <> 'left'
       order by last_seen desc
       limit 200
@@ -170,6 +178,15 @@ begin
       into total, avg_score, best, uniq
     from public.attempts
     where finished_at >= from_ts and finished_at < to_ts;
+
+    if coalesce(total, 0) = 0 then
+      select count(*), coalesce(avg(score), 0), coalesce(max(score), 0),
+             count(distinct lower(nick))
+        into total, avg_score, best, uniq
+      from public.game_runs
+      where started_at >= from_ts and started_at < to_ts
+        and finished_at is not null;
+    end if;
 
     return jsonb_build_object(
       'day', d::text,
@@ -229,5 +246,5 @@ grant execute on function public.admin_api(text, text, text) to anon, authentica
 -- Права таблиц для anon (без GRANT RLS-политики не срабатывают)
 grant usage on schema public to anon, authenticated;
 grant select, insert, update on table public.sessions to anon, authenticated;
-grant insert on table public.attempts to anon, authenticated;
+grant select, insert, update on table public.attempts to anon, authenticated;
 grant select, insert, update on table public.game_runs to anon, authenticated;

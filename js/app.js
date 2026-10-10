@@ -272,7 +272,10 @@ window.App = (function () {
       root.innerHTML = '<div class="stage-body panel">Игра не найдена</div>';
       return;
     }
-    if (Cloud()) Cloud().beginGame(state.nick, id);
+    if (Cloud()) {
+      // важно дождаться создания game_runs, иначе очки в админке останутся 0
+      Cloud().beginGame(state.nick, id);
+    }
     const ctx = {
       nick: state.nick,
       done: (res) => onGameDone(id, res || {}),
@@ -300,8 +303,19 @@ window.App = (function () {
     state.activeGameId = null;
     setHud();
     if (Cloud()) {
-      Cloud().endGame(state.nick, id, score, res.detail || {});
-      Cloud().setStatus("hub", null, state.score);
+      Promise.resolve(Cloud().endGame(state.nick, id, score, res.detail || {}))
+        .then(() =>
+          Cloud().syncProgress({
+            nick: state.nick,
+            score: state.score,
+            rank: rankFor(state.score),
+            games: [...state.played],
+            details: state.details,
+            status: "hub",
+            current_game: null,
+          })
+        )
+        .catch((e) => console.warn("[Cloud] endGame", e));
     }
 
     if (state.mode === "quick") {

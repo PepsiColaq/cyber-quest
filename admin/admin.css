@@ -148,6 +148,18 @@
 }
 .admin-table-wrap .jtable {
   margin: 0;
+  font-size: 15px;
+}
+.admin-table-wrap .jtable th,
+.admin-table-wrap .jtable td {
+  padding: 12px 14px;
+}
+.admin-table-wrap .jtable .score {
+  font-size: 17px;
+  font-weight: 700;
+}
+.admin-table-wrap .jtable tr.run-open td {
+  color: var(--warn);
 }
 .jtable .muted {
   color: var(--text-faint);

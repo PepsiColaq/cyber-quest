@@ -260,12 +260,17 @@
         .slice(0, 300)
         .map((r) => {
           const t = r.started_at ? new Date(r.started_at).toLocaleString("ru-RU") : "";
-          return `<tr>
+          const done = !!(r.finished_at || (r.score != null && Number(r.score) > 0) || r.duration_ms);
+          const dur = done
+            ? fmtDur(r.duration_ms) +
+              (r.detail && r.detail.aborted ? ' <span class="muted">(выход)</span>' : "")
+            : '<span class="muted">в игре…</span>';
+          return `<tr class="${done ? "" : "run-open"}">
             <td>${esc(t)}</td>
             <td>${esc(r.nick)}</td>
             <td>${esc(TITLES[r.game_id] || r.game_id)}</td>
-            <td class="score">${r.score ?? 0}</td>
-            <td>${fmtDur(r.duration_ms)}${r.detail && r.detail.aborted ? ' <span class="muted">(выход)</span>' : ""}</td>
+            <td class="score">${done ? r.score ?? 0 : "—"}</td>
+            <td>${dur}</td>
           </tr>`;
         })
         .join("");
