@@ -109,11 +109,6 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
-.admin-stat b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .admin-stat {
   padding: 16px;
   border-radius: var(--r-md);
@@ -125,6 +120,9 @@
   font-size: 26px;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .admin-stat span {
   font-size: 12px;
