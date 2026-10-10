@@ -1,43 +1,62 @@
-# Настройка Supabase (один раз)
+# Настройка Supabase (5 минут, без CLI)
 
-## 1. Создай проект
+GitHub Pages уже настроен:  
+**Игра:** https://pepsicolaq.github.io/cyber-quest/  
+**Админка:** https://pepsicolaq.github.io/cyber-quest/admin/
 
-1. Зайди на https://supabase.com → New project  
-2. Запомни регион, задай пароль БД.
+## 1. Создай бесплатный проект
 
-## 2. SQL
+1. Открой https://supabase.com/dashboard → **New project**  
+2. Имя любое (например `cyber-quest`), регион ближайший, пароль БД запомни.
 
-В **SQL Editor** вставь и выполни файл [`schema.sql`](schema.sql).
+## 2. Выполни SQL
 
-## 3. Ключи
+**SQL Editor → New query** → вставь весь файл [`schema.sql`](schema.sql) → **Run**.
+
+Пароль админки по умолчанию: `cyberquest-admin`  
+Сразу смени:
+
+```sql
+update public.admin_secrets
+set password_hash = crypt('ТВОЙ_НАДЁЖНЫЙ_ПАРОЛЬ', gen_salt('bf'))
+where id = 1;
+```
+
+## 3. Ключи API
 
 **Project Settings → API:**
 
-- `Project URL` → в `js/cloud-config.js` как `url`
-- `anon public` → в `js/cloud-config.js` как `anonKey`
+- Project URL  
+- `anon` `public` key  
 
-Скопируй из [`js/cloud-config.example.js`](../js/cloud-config.example.js) в `js/cloud-config.js` и подставь значения.
+Открой локально `js/cloud-config.js` и поставь:
 
-`service_role` **никогда** не клади в git / фронт.
-
-## 4. Edge Function (админка)
-
-Установи [Supabase CLI](https://supabase.com/docs/guides/cli), залогинься, привяжи проект:
-
-```bash
-supabase login
-supabase link --project-ref <твой_ref>
-supabase secrets set ADMIN_PASSWORD="придумай_сложный_пароль"
-supabase functions deploy admin-api --no-verify-jwt
+```js
+window.CloudConfig = {
+  enabled: true,
+  url: "https://XXXX.supabase.co",
+  anonKey: "eyJ....",
+  adminFn: "",          // можно пусто — админка идёт через RPC
+  heartbeatMs: 9000,
+};
 ```
 
-URL функции будет вида:
+Закоммить и запушь:
 
-`https://<ref>.supabase.co/functions/v1/admin-api`
+```bash
+cd D:\чистилка\dod-cyber-quest
+git add js/cloud-config.js
+git commit -m "Включить облако Supabase"
+git push
+```
 
-Его тоже пропиши в `js/cloud-config.js` → `adminFn`.
+Через 1–2 минуты Pages обновится — игра начнёт писать в облако, админка откроется по паролю.
 
-## 5. Проверка
+## 4. Проверка
 
-1. Открой игру онлайн → введи ник → сыграй одну миссию.  
-2. Открой `/admin/` → пароль из `ADMIN_PASSWORD` → должны появиться live/журнал.
+1. Открой игру онлайн → ник → любая миссия.  
+2. Открой `/admin/` → пароль → в «Сейчас играют» должен появиться ник.
+
+## Edge Function (необязательно)
+
+CLI нужен только если хочешь `adminFn` вместо RPC. Для ДОД достаточно шагов 1–3.

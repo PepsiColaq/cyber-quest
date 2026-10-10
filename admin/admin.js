@@ -1,4 +1,4 @@
-/* Админка преподавателя → Supabase Edge Function admin-api */
+/* Админка: Supabase RPC admin_api (основной путь) или Edge Function (если задан adminFn). */
 (function () {
   const cfg = () => window.CloudConfig || {};
   const $ = (s) => document.querySelector(s);
@@ -9,6 +9,7 @@
 
   let password = sessionStorage.getItem("cq_admin_pass") || "";
   let pollTimer = null;
+  let sb = null;
 
   function today() {
     return new Date().toISOString().slice(0, 10);
@@ -42,17 +43,46 @@
     return fmtDur(Date.now() - new Date(iso).getTime());
   }
 
+  function ensureClient() {
+    const c = cfg();
+    if (!c.enabled || !c.url || !c.anonKey) return null;
+    if (!window.supabase) return null;
+    if (!sb) {
+      sb = window.supabase.createClient(c.url, c.anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    }
+    return sb;
+  }
+
   async function api(action, extra) {
     const c = cfg();
-    if (!c.adminFn) throw new Error("adminFn не задан в cloud-config.js");
-    const res = await fetch(c.adminFn, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.assign({ action, password, day: $("#dayPick")?.value || today() }, extra || {})),
+    const day = (extra && extra.day) || $("#dayPick")?.value || today();
+
+    // 1) Edge Function, если явно задана
+    if (c.adminFn) {
+      const res = await fetch(c.adminFn, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, password, day }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "http_" + res.status);
+      if (data.error) throw new Error(data.error);
+      return data;
+    }
+
+    // 2) RPC admin_api — без CLI
+    const client = ensureClient();
+    if (!client) throw new Error("Заполни url и anonKey в js/cloud-config.js");
+    const { data, error } = await client.rpc("admin_api", {
+      p_password: password,
+      p_action: action,
+      p_day: day,
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "http_" + res.status);
-    return data;
+    if (error) throw new Error(error.message || "rpc_error");
+    if (data && data.error) throw new Error(data.error);
+    return data || {};
   }
 
   function showDash() {
@@ -75,7 +105,8 @@
     const err = $("#loginErr");
     err.textContent = "";
     password = $("#adminPass").value || "";
-    if (!cfg().enabled || !cfg().adminFn) {
+    const c = cfg();
+    if (!c.enabled || !c.url || !c.anonKey) {
       err.textContent = "Облако выключено. Заполни js/cloud-config.js (см. supabase/SETUP.md).";
       return;
     }
@@ -236,7 +267,7 @@
       }
     });
 
-    if (password && cfg().enabled && cfg().adminFn) {
+    if (password && cfg().enabled && cfg().url && cfg().anonKey) {
       api("login")
         .then(showDash)
         .catch(() => {

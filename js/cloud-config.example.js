@@ -5,6 +5,7 @@ window.CloudConfig = {
   enabled: true,
   url: "https://YOUR_PROJECT.supabase.co",
   anonKey: "YOUR_ANON_KEY",
-  adminFn: "https://YOUR_PROJECT.supabase.co/functions/v1/admin-api",
+  // Пусто = админка через SQL RPC (рекомендуется). Edge Function не обязательна.
+  adminFn: "",
   heartbeatMs: 9000,
 };

@@ -33,25 +33,14 @@
 3. Задеплой Edge Function `admin-api`, задай secret `ADMIN_PASSWORD`  
 4. Скопируй `js/cloud-config.example.js` → `js/cloud-config.js`, включи `enabled: true`, вставь `url`, `anonKey`, `adminFn`
 
-### 2) GitHub Pages
+### 2) GitHub Pages — уже опубликовано
 
-```bash
-cd dod-cyber-quest
-git init
-git add .
-git commit -m "КиберКвест: игра + облачная админка"
-gh auth login   # если токен протух
-gh repo create cyber-quest --public --source=. --remote=origin --push
-```
+Репозиторий: https://github.com/PepsiColaq/cyber-quest  
 
-Затем: **Settings → Pages → Deploy from branch `main` / root (/**)`.
+- **Игра:** https://pepsicolaq.github.io/cyber-quest/  
+- **Админка:** https://pepsicolaq.github.io/cyber-quest/admin/
 
-Ссылки после деплоя:
-
-- Игра: `https://<user>.github.io/cyber-quest/`  
-- Админка: `https://<user>.github.io/cyber-quest/admin/`
-
-> Если репозиторий уже существует — просто `git push -u origin main`.
+Обновления: `git push` в `main` — Pages пересоберётся сам.
 
 ### 3) Админка преподавателя
 
