@@ -104,14 +104,41 @@ window.GameModules.attackmap = function (root, ctx) {
     dot.style.top = oy + "%";
     map.appendChild(dot);
 
+    function fireLaser() {
+      const mw = map.clientWidth || 1;
+      const mh = map.clientHeight || 1;
+      const x1 = (ox / 100) * mw;
+      const y1 = (oy / 100) * mh;
+      const x2 = (CX / 100) * mw;
+      const y2 = (CY / 100) * mh;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.hypot(dx, dy);
+      const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+      const beam = E.el('<div class="am-laser"></div>');
+      beam.style.left = x1 + "px";
+      beam.style.top = y1 - 2 + "px";
+      beam.style.width = dist + "px";
+      beam.style.setProperty("--am-rot", deg + "deg");
+      beam.style.transform = "rotate(" + deg + "deg)";
+      map.appendChild(beam);
+      const core = map.querySelector(".am-core");
+      if (core) {
+        core.classList.add("struck");
+        E.later(() => core.classList.remove("struck"), 450);
+      }
+      E.later(() => beam.remove(), 420);
+    }
+
     const atk = { line, dot, dead: false, impact: null };
     atk.impact = E.later(() => {
       if (atk.dead || !running) return;
       atk.dead = true;
+      fireLaser();
       hp--;
       drawHp();
       map.classList.add("am-hit");
-      E.later(() => map.classList.remove("am-hit"), 220);
+      E.later(() => map.classList.remove("am-hit"), 280);
       line.remove();
       dot.remove();
       if (hp <= 0) finish();
