@@ -8,7 +8,8 @@ window.AppConfig = {
   splashMs: 1600,
   idleResetMs: 120000,
   storageKey: "chuikov-cyber-quest-v1",
-  quickShift: ["phishing", "passwords", "logs", "incident"],
+  /* quickShift больше не фиксированный: App.pickQuickFour перемешивает все игры */
+  quickShift: [],
   ranks: [
     { min: 0, title: "Стажёр" },
     { min: 800, title: "Аналитик" },

@@ -40,7 +40,12 @@ window.GameModules.passwords = function (root, ctx) {
       const bits = p.length * (charset ? Math.log2(charset) : 0);
       const seconds = charset ? Math.pow(2, bits) / 1e10 : 0;
       let s = Math.min(100, Math.round((bits / 90) * 100));
-      const weak = ["123", "qwerty", "password", "admin", "пароль", "qwert"];
+      const weak = [
+        "123", "1234", "12345", "123456", "qwerty", "qwert", "password", "pass",
+        "admin", "пароль", "login", "welcome", "monkey", "dragon", "letmein",
+        "abc123", "111111", "iloveyou", "master", "football", "shadow", "sunshine",
+        "princess", "qwertyuiop", "йцукен", "ячсмит", "любовь", "мама", "дата",
+      ];
       if (weak.some((w) => p.toLowerCase().includes(w))) s = Math.max(5, s - 40);
       return { s, seconds, bits };
     }

@@ -138,26 +138,23 @@ window.App = (function () {
 
   /* ---------- Экран ника ---------- */
   function initNick() {
-    const sug = $("#nickSuggest");
-    const names = ["N30N", "Gh0st", "Zer0", "Byte", "Krypt0", "Ф0кс"];
-    if (sug) {
-      names.forEach((n) => {
-        const b = document.createElement("button");
-        b.textContent = n;
-        b.addEventListener("click", () => {
-          $("#nickInput").value = n;
-          $("#nickInput").focus();
-        });
-        sug.appendChild(b);
-      });
-    }
     on("#nickGo", "click", submitNick);
     on("#nickInput", "keydown", (e) => {
       if (e.key === "Enter") submitNick();
     });
   }
   async function submitNick() {
-    const v = ($("#nickInput").value || "").trim();
+    const Guard = window.GameGuard;
+    const raw = ($("#nickInput").value || "").trim();
+    const v = Guard ? Guard.sanitizeNick(raw) : raw;
+    if (raw && !v) {
+      const input = $("#nickInput");
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+      return;
+    }
     state.nick = v || "Аноним" + Math.floor(Math.random() * 900 + 100);
     setHud();
     renderHub();
@@ -261,10 +258,14 @@ window.App = (function () {
     // игнорируем «догоняющие» вызовы после выхода/смены экрана (стенд, idle-reset)
     if (!document.body.classList.contains("app-open")) return;
     if (!$("#scrGame").classList.contains("active")) return;
-    const score = Math.max(0, Math.round(res.score || 0));
+    if (state.activeGameId && state.activeGameId !== id) return;
+    const Guard = window.GameGuard;
+    let score = Math.max(0, Math.round(res.score || 0));
+    if (Guard) score = Guard.clampGameScore(id, score, res.durationMs);
     const prev = state.gameScores[id] || 0;
     if (state.played.has(id)) state.score += score - prev;
     else state.score += score;
+    if (Guard) state.score = Guard.clampTotal(state.score);
     state.gameScores[id] = Math.max(prev, score);
     state.details[id] = res.detail || {};
     state.played.add(id);
@@ -304,7 +305,11 @@ window.App = (function () {
   }
 
   function startQuick() {
-    state.queue = cfg.quickShift.slice();
+    const Guard = window.GameGuard;
+    const allIds = cfg.games.map((g) => g.id);
+    state.queue = Guard
+      ? Guard.pickQuickFour(allIds)
+      : allIds.slice().sort(() => Math.random() - 0.5).slice(0, 4);
     const first = state.queue.shift();
     startGame(first, "quick");
   }
@@ -315,9 +320,10 @@ window.App = (function () {
     const at = new Date();
     const stamp =
       at.toLocaleDateString("ru-RU") + " " + at.toLocaleTimeString("ru-RU").slice(0, 5);
+    const Guard = window.GameGuard;
     const attempt = {
-      nick: state.nick,
-      score: state.score,
+      nick: Guard ? Guard.sanitizeNick(state.nick) || state.nick : state.nick,
+      score: Guard ? Guard.clampTotal(state.score) : state.score,
       rank,
       at: stamp,
       games: [...state.played],

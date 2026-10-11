@@ -1359,6 +1359,21 @@
 .am-src svg {
   width: 16px;
   height: 16px;
+  pointer-events: none;
+}
+.am-tag {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-style: normal;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  color: var(--danger);
+  opacity: 0.9;
+  pointer-events: none;
+  text-shadow: 0 1px 4px #000;
 }
 .am-ping {
   position: absolute;

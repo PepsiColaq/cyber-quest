@@ -63,6 +63,15 @@ window.GameModules.attackmap = function (root, ctx) {
   }
   drawHp();
 
+  const labels =
+    (window.Banks && window.Banks.attackLabels) || [
+      "C2",
+      "Сканер",
+      "Брутфорс",
+      "DDoS",
+      "Фишинг",
+    ];
+
   function spawn() {
     if (!running) return;
     // источник у края по случайному углу
@@ -70,6 +79,7 @@ window.GameModules.attackmap = function (root, ctx) {
     const ox = CX + Math.cos(ang) * 46;
     const oy = CY + Math.sin(ang) * 42;
     const dur = 2600 + Math.random() * 1200;
+    const tag = labels[Math.floor(Math.random() * labels.length)];
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", ox);
@@ -87,7 +97,9 @@ window.GameModules.attackmap = function (root, ctx) {
       line.style.strokeDashoffset = 0;
     });
 
-    const dot = E.el(`<div class="am-src"><span class="am-ping"></span>${E.Icons.bolt}</div>`);
+    const dot = E.el(
+      `<div class="am-src" title="${tag}"><span class="am-ping"></span>${E.Icons.bolt}<i class="am-tag">${tag}</i></div>`
+    );
     dot.style.left = ox + "%";
     dot.style.top = oy + "%";
     map.appendChild(dot);

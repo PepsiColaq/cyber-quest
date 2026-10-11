@@ -24,22 +24,28 @@
   }
 
   function saveAttempt(attempt) {
+    const Guard = window.GameGuard;
+    const nick = Guard
+      ? Guard.sanitizeNick(attempt.nick) || String(attempt.nick || "").slice(0, 14)
+      : attempt.nick;
+    const score = Guard ? Guard.clampTotal(attempt.score) : Math.max(0, Number(attempt.score) || 0);
+    const clean = Object.assign({}, attempt, { nick, score });
     const data = read();
-    data.attempts.unshift(attempt);
+    data.attempts.unshift(clean);
     data.attempts = data.attempts.slice(0, 200);
 
     const existing = data.leaders.find(
-      (l) => l.nick.toLowerCase() === attempt.nick.toLowerCase()
+      (l) => l.nick.toLowerCase() === clean.nick.toLowerCase()
     );
-    if (!existing || attempt.score > existing.score) {
+    if (!existing || clean.score > existing.score) {
       data.leaders = data.leaders.filter(
-        (l) => l.nick.toLowerCase() !== attempt.nick.toLowerCase()
+        (l) => l.nick.toLowerCase() !== clean.nick.toLowerCase()
       );
       data.leaders.push({
-        nick: attempt.nick,
-        score: attempt.score,
-        rank: attempt.rank,
-        at: attempt.at,
+        nick: clean.nick,
+        score: clean.score,
+        rank: clean.rank,
+        at: clean.at,
       });
     }
     data.leaders.sort((a, b) => b.score - a.score);

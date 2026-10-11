@@ -158,14 +158,17 @@ window.Cloud = (function () {
     if (!ready || !sessionId) return;
     const gid = gameId || activeGameId;
     const duration = runStarted ? Math.max(0, Date.now() - runStarted) : null;
-    const points = Math.max(0, Math.round(Number(score) || 0));
+    const Guard = window.GameGuard;
+    let points = Math.max(0, Math.round(Number(score) || 0));
+    if (Guard) points = Guard.clampGameScore(gid, points, duration);
+    const safeNick = Guard ? Guard.sanitizeNick(nick) || String(nick || "").slice(0, 14) : nick;
 
     if (gid) {
       await safe(() =>
         client.from("game_runs").insert({
           id: uuid(),
           session_id: sessionId,
-          nick,
+          nick: safeNick,
           game_id: gid,
           score: points,
           started_at: new Date(Date.now() - (duration || 0)).toISOString(),
@@ -182,10 +185,17 @@ window.Cloud = (function () {
 
   async function syncProgress(snapshot) {
     if (!ready || !sessionId) return;
+    const Guard = window.GameGuard;
+    const score = Guard
+      ? Guard.clampTotal(snapshot.score || 0)
+      : Math.max(0, Math.round(Number(snapshot.score) || 0));
+    const nick = Guard
+      ? Guard.sanitizeNick(snapshot.nick) || String(snapshot.nick || "").slice(0, 14)
+      : snapshot.nick;
     const row = {
       session_id: sessionId,
-      nick: snapshot.nick,
-      score: snapshot.score || 0,
+      nick,
+      score,
       rank: snapshot.rank || "",
       finished_at: new Date().toISOString(),
       games: snapshot.games || [],
@@ -212,7 +222,7 @@ window.Cloud = (function () {
     await setStatus(
       snapshot.status || "hub",
       snapshot.current_game ?? null,
-      snapshot.score || 0
+      score
     );
   }
 

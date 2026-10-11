@@ -30,16 +30,19 @@ window.GameModules.network = function (root, ctx) {
   );
 
   function play(root, ctx) {
-    // узлы в % координатах
-    const nodes = [
+    const nets = (window.Banks && window.Banks.liveNets) || [];
+    const layout =
+      nets.length > 0 ? E.pick(nets, 1)[0] : null;
+    // узлы в % координатах (случайная схема из банка)
+    const nodes = (layout ? layout.nodes : [
       { id: "net", name: "Интернет", ic: "wifi", x: 50, y: 10, role: "source" },
       { id: "fw", name: "Шлюз", ic: "shield", x: 50, y: 32, role: "hop", vuln: true, issue: "Слабое правило ACL" },
       { id: "wifi", name: "Wi‑Fi", ic: "wifi", x: 22, y: 58, role: "hop", vuln: true, issue: "Гостевая сеть в LAN" },
       { id: "mail", name: "Почта", ic: "mail", x: 78, y: 58, role: "hop", safe: true },
       { id: "srv", name: "Сервер", ic: "server", x: 35, y: 82, role: "hop", vuln: true, issue: "Без патча" },
       { id: "core", name: "ЯДРО", ic: "shield", x: 65, y: 88, role: "core" },
-    ];
-    const edges = [
+    ]).map((n) => Object.assign({}, n));
+    const edges = (layout && layout.edges) || [
       ["net", "fw"],
       ["fw", "wifi"],
       ["fw", "mail"],

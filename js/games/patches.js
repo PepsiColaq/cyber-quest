@@ -18,20 +18,28 @@ window.GameModules.patches = function (root, ctx) {
   );
 
   function play(root, ctx) {
-  const vulns = [
-    "SQL-инъекция",
-    "XSS-уязвимость",
-    "Открытый порт 445",
-    "Слабый пароль",
-    "Устаревший TLS",
-    "RCE в сервисе",
-    "Нет 2FA",
-    "CSRF-дыра",
-    "Открытый Redis",
-    "Default credentials",
-    "Path traversal",
-  ];
-  const safes = ["Патч установлен", "Антивирус в норме", "Бэкап готов", "WAF активен", "2FA включена"];
+  const vulns =
+    (window.Banks && window.Banks.patchVulns) || [
+      "SQL-инъекция",
+      "XSS-уязвимость",
+      "Открытый порт 445",
+      "Слабый пароль",
+      "Устаревший TLS",
+      "RCE в сервисе",
+      "Нет 2FA",
+      "CSRF-дыра",
+      "Открытый Redis",
+      "Default credentials",
+      "Path traversal",
+    ];
+  const safes =
+    (window.Banks && window.Banks.patchSafes) || [
+      "Патч установлен",
+      "Антивирус в норме",
+      "Бэкап готов",
+      "WAF активен",
+      "2FA включена",
+    ];
 
   const stage = E.buildStage(root, {
     id: "patches",
