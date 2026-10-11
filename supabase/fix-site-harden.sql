@@ -1,17 +1,36 @@
 -- ============================================================
 -- Защита САЙТА / БД от злоупотреблений через anon-ключ.
--- Это НЕ «античит очков», а урезание лишних прав в Supabase.
--- Запусти в SQL Editor проекта (один раз).
+-- Урезает лишние права, но INSERT игры сохраняет.
+-- Если облако перестало писать очки — выполни fix-restore-inserts.sql
 -- ============================================================
 
--- 1) Аноним НЕ должен читать все попытки игроков (приватность + меньше поверхности атаки)
+-- 0) Гарантируем, что игра МОЖЕТ писать (insert)
+grant insert, update, select on table public.sessions to anon, authenticated;
+grant insert on table public.attempts to anon, authenticated;
+grant insert on table public.game_runs to anon, authenticated;
+
+drop policy if exists sessions_insert_anon on public.sessions;
+create policy sessions_insert_anon on public.sessions
+  for insert to anon, authenticated
+  with check (char_length(nick) between 1 and 32);
+
+drop policy if exists attempts_insert_anon on public.attempts;
+create policy attempts_insert_anon on public.attempts
+  for insert to anon, authenticated
+  with check (char_length(nick) between 1 and 32 and score >= 0 and score <= 8000);
+
+drop policy if exists game_runs_insert_anon on public.game_runs;
+create policy game_runs_insert_anon on public.game_runs
+  for insert to anon, authenticated
+  with check (char_length(nick) between 1 and 32 and score >= 0 and score <= 2000);
+
+-- 1) Аноним НЕ должен читать все попытки игроков
 drop policy if exists attempts_select_anon on public.attempts;
 
--- 2) Аноним НЕ должен править чужие game_runs (подмена очков миссий)
+-- 2) Аноним НЕ должен править чужие game_runs
 drop policy if exists game_runs_update_anon on public.game_runs;
 
--- 3) UPDATE attempts у анона убираем: игра пишет через INSERT,
---    а при ошибке UPDATE cloud.js и так создаёт новую строку
+-- 3) UPDATE attempts у анона убираем (игра только INSERT)
 drop policy if exists attempts_update_anon on public.attempts;
 
 -- 4) sessions: прямой UPDATE анону лучше не давать —
