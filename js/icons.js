@@ -40,7 +40,7 @@
       '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14.5h18M9 4v5m6 0V4M6.5 9v5.5m5.5 0V9m5.5 5.5V9M12 14.5V20"/>'
     ),
     attackmap: S(
-      '<rect x="7" y="8" width="12" height="8" rx="1.5"/><path d="M4 10h3v4H4z"/><circle cx="11" cy="12" r="1" fill="currentColor"/><path d="M14 10.5h3M14 12h3M14 13.5h2"/>'
+      '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15 0 18M12 3c-3 2.5-3 15 0 18"/>'
     ),
     globe: S(
       '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15 0 18M12 3c-3 2.5-3 15 0 18"/>'
