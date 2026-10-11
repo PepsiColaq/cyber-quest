@@ -201,24 +201,13 @@ window.Cloud = (function () {
       games: snapshot.games || [],
       details: snapshot.details || {},
     };
-    if (attemptId) {
-      const r = await safe(() =>
-        client.from("attempts").update(row).eq("id", attemptId)
-      );
-      if (r && r.error) {
-        // если UPDATE недоступен — пишем новую строку
-        attemptId = uuid();
-        await safe(() =>
-          client.from("attempts").insert({ id: attemptId, ...row })
-        );
-      }
-    } else {
-      attemptId = uuid();
-      const r = await safe(() =>
-        client.from("attempts").insert({ id: attemptId, ...row })
-      );
-      if (!r || r.error) attemptId = null;
-    }
+    // Только INSERT: UPDATE attempts у anon отключён (fix-site-harden.sql),
+    // чтобы чужие строки нельзя было переписать через консоль.
+    attemptId = uuid();
+    const r = await safe(() =>
+      client.from("attempts").insert({ id: attemptId, ...row })
+    );
+    if (!r || r.error) attemptId = null;
     await setStatus(
       snapshot.status || "hub",
       snapshot.current_game ?? null,
