@@ -1369,33 +1369,31 @@
 }
 .am-cracks .ck {
   fill: none;
-  stroke: rgba(255, 230, 200, 0.05);
-  stroke-width: 1.6;
+  stroke: #ffe8e0;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0;
-  transition: opacity 0.25s ease, stroke 0.25s ease;
-  filter: drop-shadow(0 0 2px rgba(255, 80, 80, 0.0));
+  filter: drop-shadow(0 0 3px rgba(255, 70, 70, 0.95));
 }
-.am-core[data-dmg="1"] .ck1,
-.am-core[data-dmg="2"] .ck1,
-.am-core[data-dmg="2"] .ck2,
-.am-core[data-dmg="3"] .ck1,
-.am-core[data-dmg="3"] .ck2,
-.am-core[data-dmg="3"] .ck3,
-.am-core[data-dmg="4"] .ck1,
-.am-core[data-dmg="4"] .ck2,
-.am-core[data-dmg="4"] .ck3,
-.am-core[data-dmg="4"] .ck4,
-.am-core[data-dmg="5"] .ck {
+.am-cracks .ck.on {
   opacity: 1;
-  stroke: #ffe8e0;
-  filter: drop-shadow(0 0 3px rgba(255, 70, 70, 0.9));
+  animation: ckIn 0.28s ease-out both;
+}
+@keyframes ckIn {
+  from {
+    opacity: 0;
+    stroke-width: 0.5;
+  }
+  to {
+    opacity: 1;
+    stroke-width: 1.8;
+  }
 }
 .am-core[data-dmg="3"] .ck,
 .am-core[data-dmg="4"] .ck,
 .am-core[data-dmg="5"] .ck {
-  stroke-width: 2;
+  stroke-width: 2.2;
 }
 .am-core.critical {
   border-color: var(--danger);
@@ -1404,16 +1402,17 @@
   box-shadow: 0 0 22px rgba(255, 70, 70, 0.35);
   animation: corePulse 1.1s ease-in-out infinite;
 }
-.am-core.broken {
-  border-color: #ff3b3b;
-  color: #ff6b6b;
-  background: rgba(120, 20, 20, 0.55);
-  box-shadow: 0 0 36px rgba(255, 40, 40, 0.55);
-  filter: saturate(1.2);
+.am-core.shattering {
+  animation: none;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
 }
-.am-core.broken .am-core-ic {
-  opacity: 0.45;
-  filter: grayscale(0.4);
+.am-core.shattering .am-core-ic,
+.am-core.shattering .am-cracks {
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 .am-shatter {
   position: absolute;
@@ -1423,6 +1422,28 @@
   opacity: 0;
   z-index: 3;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 80, 80, 0.35) 35%, transparent 70%);
+}
+.am-shard {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  background: linear-gradient(145deg, #f0d78a 0%, #c79a3c 40%, #ff6b6b 100%);
+  box-shadow: 0 0 10px rgba(255, 80, 80, 0.55);
+  animation: amShardFall 0.95s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  opacity: 1;
+}
+@keyframes amShardFall {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx, 40px), var(--dy, 160px)) rotate(var(--rot, 180deg)) scale(0.7);
+    opacity: 0;
+  }
 }
 @keyframes amShake {
   0%,

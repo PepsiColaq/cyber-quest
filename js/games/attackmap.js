@@ -47,13 +47,7 @@ window.GameModules.attackmap = function (root, ctx) {
       <div class="am-rings"><i></i><i></i><i></i></div>
       <div class="am-core" style="left:${CX}%;top:${CY}%" data-dmg="0">
         <span class="am-core-ic">${E.Icons.shield}</span>
-        <svg class="am-cracks" viewBox="0 0 64 64" aria-hidden="true">
-          <path class="ck ck1" d="M32 8 L28 22 L18 26 L30 30 L26 48"/>
-          <path class="ck ck2" d="M32 8 L38 20 L50 24 L36 32 L42 52"/>
-          <path class="ck ck3" d="M12 34 L24 36 L28 48 L22 58"/>
-          <path class="ck ck4" d="M52 30 L40 38 L44 50 L54 56"/>
-          <path class="ck ck5" d="M20 16 L32 28 L44 18"/>
-        </svg>
+        <svg class="am-cracks" viewBox="0 0 64 64" aria-hidden="true"></svg>
         <i class="am-shatter"></i>
       </div>
     </div>`);
@@ -62,22 +56,82 @@ window.GameModules.attackmap = function (root, ctx) {
 
   const svg = map.querySelector(".am-lines");
   const coreEl = map.querySelector(".am-core");
+  const cracksSvg = coreEl.querySelector(".am-cracks");
   const hpEl = hud.querySelector("#amHp");
   const killEl = hud.querySelector("#amKill");
 
   let hp = 5,
     kills = 0,
     score = 0,
-    running = true;
+    running = true,
+    shattered = false;
+
   function drawHp() {
     hpEl.textContent = "●".repeat(Math.max(0, hp)) + "○".repeat(Math.max(0, 5 - hp));
     const dmg = Math.min(5, Math.max(0, 5 - hp));
     coreEl.dataset.dmg = String(dmg);
-    coreEl.classList.toggle("critical", hp <= 2);
-    coreEl.classList.toggle("broken", hp <= 0);
+    coreEl.classList.toggle("critical", hp <= 2 && hp > 0);
     hpEl.style.color = hp <= 2 ? "var(--danger)" : "var(--ok)";
   }
   drawHp();
+
+  function pt(ang, r) {
+    return [32 + Math.cos(ang) * r, 32 + Math.sin(ang) * r];
+  }
+  function addCrack(hitAng) {
+    // трещина от края удара к центру + случайные ветки
+    const base = hitAng + (Math.random() - 0.5) * 0.9;
+    const [x0, y0] = pt(base, 28 + Math.random() * 3);
+    const [x1, y1] = pt(base + (Math.random() - 0.5) * 0.5, 18 + Math.random() * 6);
+    const [x2, y2] = pt(base + (Math.random() - 0.5) * 0.8, 8 + Math.random() * 8);
+    const [bx, by] = pt(base + (Math.random() > 0.5 ? 0.7 : -0.7), 14 + Math.random() * 8);
+    const d = `M${x0.toFixed(1)} ${y0.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)} M${x1.toFixed(1)} ${y1.toFixed(1)} L${bx.toFixed(1)} ${by.toFixed(1)}`;
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("class", "ck on");
+    cracksSvg.appendChild(path);
+  }
+
+  function shatterCore() {
+    if (shattered) return;
+    shattered = true;
+    const mw = map.clientWidth || 1;
+    const mh = map.clientHeight || 1;
+    const cx = (CX / 100) * mw;
+    const cy = (CY / 100) * mh;
+    coreEl.classList.add("shattering");
+    const shapes = [
+      "polygon(20% 10%, 80% 0%, 100% 60%, 40% 100%, 0% 50%)",
+      "polygon(10% 0%, 100% 20%, 70% 100%, 0% 70%)",
+      "polygon(0% 30%, 60% 0%, 100% 40%, 50% 100%, 0% 80%)",
+      "polygon(30% 0%, 100% 10%, 80% 100%, 0% 60%)",
+      "polygon(0% 0%, 100% 30%, 60% 100%, 10% 80%)",
+    ];
+    for (let i = 0; i < 11; i++) {
+      const shard = E.el('<div class="am-shard"></div>');
+      const ang = (Math.PI * 2 * i) / 11 + Math.random() * 0.4;
+      const dist = 40 + Math.random() * 90;
+      const dx = Math.cos(ang) * dist;
+      const fall = 120 + Math.random() * 160;
+      const rot = (Math.random() * 520 - 260) | 0;
+      const w = 10 + ((Math.random() * 14) | 0);
+      const h = 12 + ((Math.random() * 16) | 0);
+      shard.style.left = cx - w / 2 + "px";
+      shard.style.top = cy - h / 2 + "px";
+      shard.style.width = w + "px";
+      shard.style.height = h + "px";
+      shard.style.clipPath = shapes[i % shapes.length];
+      shard.style.setProperty("--dx", dx.toFixed(1) + "px");
+      shard.style.setProperty("--dy", fall.toFixed(1) + "px");
+      shard.style.setProperty("--rot", rot + "deg");
+      shard.style.animationDelay = (Math.random() * 0.08).toFixed(2) + "s";
+      map.appendChild(shard);
+      E.later(() => shard.remove(), 1200);
+    }
+    E.later(() => {
+      coreEl.style.opacity = "0";
+    }, 120);
+  }
 
   const labels =
     (window.Banks && window.Banks.attackLabels) || [
@@ -148,13 +202,17 @@ window.GameModules.attackmap = function (root, ctx) {
       if (atk.dead || !running) return;
       atk.dead = true;
       fireLaser();
+      addCrack(Math.atan2(oy - CY, ox - CX));
       hp--;
       drawHp();
       map.classList.add("am-hit");
       E.later(() => map.classList.remove("am-hit"), 280);
       line.remove();
       dot.remove();
-      if (hp <= 0) finish();
+      if (hp <= 0) {
+        shatterCore();
+        E.later(finish, 700);
+      }
     }, dur);
 
     dot.addEventListener("pointerdown", (e) => {
