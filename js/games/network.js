@@ -1,28 +1,28 @@
-/* 06 — Живая схема атаки · инфекция ползёт по сети, ставь щиты на узлы. */
+/* 06 — Ночной дежурный SOC · triage алертов по приоритету. */
 window.GameModules.network = function (root, ctx) {
   const E = window.Engine;
   E.intro(
     root,
     {
       id: "network",
-      title: "Живая схема атаки",
-      kicker: "Периметр · останови заражение",
-      goal: "Красная волна ползёт от интернета к ядру. Успей закрыть уязвимые узлы щитом, пока зараза не дошла.",
+      title: "Ночной дежурный SOC",
+      kicker: "Смена · triage алертов",
+      goal: "На стене мониторов вспыхивают алерты. Распредели каждый: Игнор / Смотреть / Критично.",
       rules: [
         {
           ic: "bolt",
           tone: "bad",
-          t: "Узлы с меткой <b>!</b> уязвимы. Кликни — поставишь щит (<b>+70</b>). Зараза не пройдёт через щит.",
-        },
-        {
-          ic: "shield",
-          tone: "ok",
-          t: "Если волна дойдёт до <b>ЯДРА</b> — раунд провален. Зелёные узлы уже в порядке, их не трогай.",
+          t: "<b>Критично</b> — реальная угроза прямо сейчас (шифровальщик, чужой вход админа, утечка).",
         },
         {
           ic: "clock",
-          tone: "gold",
-          t: "У тебя около <b>28 секунд</b>. Закрой все дыры раньше, чем инфекция прорвётся.",
+          tone: "warn",
+          t: "<b>Смотреть</b> — подозрительно, но не паника: последить, собрать контекст.",
+        },
+        {
+          ic: "check",
+          tone: "ok",
+          t: "<b>Игнор</b> — шум / плановое / безопасно. Ошибка приоритета: монитор «рвётся», штраф. Раунд: <b>40 сек</b>.",
         },
       ],
     },
@@ -30,32 +30,117 @@ window.GameModules.network = function (root, ctx) {
   );
 
   function play(root, ctx) {
-    const nets = (window.Banks && window.Banks.liveNets) || [];
-    const layout =
-      nets.length > 0 ? E.pick(nets, 1)[0] : null;
-    // узлы в % координатах (случайная схема из банка)
-    const nodes = (layout ? layout.nodes : [
-      { id: "net", name: "Интернет", ic: "wifi", x: 50, y: 10, role: "source" },
-      { id: "fw", name: "Шлюз", ic: "shield", x: 50, y: 32, role: "hop", vuln: true, issue: "Слабое правило ACL" },
-      { id: "wifi", name: "Wi‑Fi", ic: "wifi", x: 22, y: 58, role: "hop", vuln: true, issue: "Гостевая сеть в LAN" },
-      { id: "mail", name: "Почта", ic: "mail", x: 78, y: 58, role: "hop", safe: true },
-      { id: "srv", name: "Сервер", ic: "server", x: 35, y: 82, role: "hop", vuln: true, issue: "Без патча" },
-      { id: "core", name: "ЯДРО", ic: "shield", x: 65, y: 88, role: "core" },
-    ]).map((n) => Object.assign({}, n));
-    const edges = (layout && layout.edges) || [
-      ["net", "fw"],
-      ["fw", "wifi"],
-      ["fw", "mail"],
-      ["wifi", "srv"],
-      ["mail", "core"],
-      ["srv", "core"],
+    const BANK = [
+      {
+        title: "Ransomware.Note",
+        body: "На файловом сервере появились .LOCKED и записка с выкупом",
+        sev: "critical",
+        why: "Шифровальщик — изоляция и реакция немедленно",
+      },
+      {
+        title: "Admin@03:14",
+        body: "Успешный вход domain\\admin с IP 185.220.x.x (другая страна)",
+        sev: "critical",
+        why: "Ночной админ из-за рубежа — компрометация учётки",
+      },
+      {
+        title: "DNS → pastebin",
+        body: "ПК бухгалтерии шлёт длинные DNS-запросы на странный домен",
+        sev: "critical",
+        why: "Похоже на скрытый канал утечки данных",
+      },
+      {
+        title: "RDP brute",
+        body: "С внешнего IP 400+ FAIL к серверу практики за 2 минуты, затем OK",
+        sev: "critical",
+        why: "После брутфорса успешный вход — уже внутри",
+      },
+      {
+        title: "USB.Autorun",
+        body: "На лаб. ПК запустился неизвестный .exe с флешки «Зарплаты»",
+        sev: "critical",
+        why: "Классическая доставка вредоноса",
+      },
+      {
+        title: "Mail rule",
+        body: "У преподавателя создано скрытое правило: все письма → внешний ящик",
+        sev: "critical",
+        why: "Тихая пересылка почты — кража переписки",
+      },
+      {
+        title: "New device",
+        body: "Вход в почту a.petrov с нового iPhone, город тот же, днём",
+        sev: "watch",
+        why: "Может быть новый телефон — проверить у человека",
+      },
+      {
+        title: "FAIL×6",
+        body: "Шесть неверных паролей к VPN, потом тишина, IP из города кампуса",
+        sev: "watch",
+        why: "Похоже на опечатки; стоит понаблюдать",
+      },
+      {
+        title: "Port scan",
+        body: "Внутренний хост просканировал соседние /24 за 40 секунд",
+        sev: "watch",
+        why: "Может быть лаба или червь — нужна проверка",
+      },
+      {
+        title: "Odd hours",
+        body: "Студент зашёл в LMS в 01:20 — обычно только днём",
+        sev: "watch",
+        why: "Аномалия режима, но не доказательство взлома",
+      },
+      {
+        title: "Cert warn",
+        body: "На сайте колледжа сертификат истекает через 9 дней",
+        sev: "watch",
+        why: "Плановая задача, не инцидент «прямо сейчас»",
+      },
+      {
+        title: "Backup.OK",
+        body: "Ночной бэкап БД завершён, код 0, как каждый день в 02:00",
+        sev: "ignore",
+        why: "Плановое событие — не тревога",
+      },
+      {
+        title: "AV update",
+        body: "Антивирус на 40 ПК обновил базы по расписанию",
+        sev: "ignore",
+        why: "Штатное обновление",
+      },
+      {
+        title: "Printer jam",
+        body: "Принтер в 214: «закончилась бумага»",
+        sev: "ignore",
+        why: "Не киберинцидент",
+      },
+      {
+        title: "DHCP renew",
+        body: "Ноут учителя получил новый IP в той же подсети",
+        sev: "ignore",
+        why: "Обычная аренда адреса",
+      },
+      {
+        title: "Spam quarantine",
+        body: "Фильтр отложил 12 писем «VIAGRA» в карантин",
+        sev: "ignore",
+        why: "Система уже отработала",
+      },
     ];
 
-    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    const COLS = [
+      { id: "ignore", label: "Игнор", hint: "шум / план", tone: "ok" },
+      { id: "watch", label: "Смотреть", hint: "подозрительно", tone: "warn" },
+      { id: "critical", label: "Критично", hint: "действовать", tone: "bad" },
+    ];
+
+    const alerts = E.pick(BANK, 7).map((a, i) => Object.assign({}, a, { uid: "a" + i }));
+
     const stage = E.buildStage(root, {
       id: "network",
-      title: "Живая схема атаки",
-      kicker: "Периметр · останови заражение",
+      title: "Ночной дежурный SOC",
+      kicker: "Смена · triage алертов · 40 сек",
       rounds: 0,
       timed: true,
     });
@@ -64,225 +149,195 @@ window.GameModules.network = function (root, ctx) {
     stage.body.appendChild(
       E.el(
         `<div>
-          <div class="q-prompt">Инфекция в сети</div>
-          <div class="q-sub">Кликай уязвимые узлы <b style="color:var(--danger)">!</b>, пока красная волна не дошла до ядра.</div>
+          <div class="q-prompt">Стена алертов</div>
+          <div class="q-sub">Перетащи монитор в колонку или тапни монитор → колонку. Верный приоритет: <b>+70</b>.</div>
         </div>`
       )
     );
 
     const hud = E.el(
       `<div class="patch-hud">
-        <span>Щиты: <b id="lnShield">0</b>/<b id="lnNeed">0</b></span>
-        <span>Статус: <b id="lnStat" style="color:var(--warn)">атака</b></span>
+        <span>Разобрано: <b id="socDone">0</b>/${alerts.length}</span>
+        <span>Верно: <b id="socOk" style="color:var(--ok)">0</b></span>
+        <span>Ошибки: <b id="socBad" style="color:var(--danger)">0</b></span>
       </div>`
     );
     stage.body.appendChild(hud);
 
-    const field = E.el(`
-      <div class="live-net">
-        <div class="ln-bg"></div>
-        <svg class="ln-wires" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-        <div class="ln-nodes" id="lnNodes"></div>
-      </div>`);
-    stage.body.appendChild(field);
+    const wall = E.el('<div class="soc-wall" id="socWall"></div>');
+    stage.body.appendChild(wall);
+
+    const bins = E.el('<div class="soc-bins" id="socBins"></div>');
+    COLS.forEach((c) => {
+      bins.appendChild(
+        E.el(
+          `<div class="soc-bin ${c.tone}" data-bin="${c.id}" tabindex="0">
+            <b>${c.label}</b>
+            <span>${c.hint}</span>
+          </div>`
+        )
+      );
+    });
+    stage.body.appendChild(bins);
 
     const foot = E.el(
       `<div class="stage-foot">
-        <span class="chip"><span class="dot"></span> Удержи ядро</span>
-        <button class="btn btn-ghost" id="lnDone" type="button">Готово</button>
+        <span class="chip"><span class="dot"></span> Ночная смена SOC</span>
+        <button class="btn btn-ghost" id="socDoneBtn" type="button">Завершить смену</button>
       </div>`
     );
     stage.body.appendChild(foot);
     window.hydrateIcons(stage.body);
 
-    const svg = field.querySelector(".ln-wires");
-    const nodesEl = field.querySelector("#lnNodes");
-    const need = nodes.filter((n) => n.vuln).length;
-    hud.querySelector("#lnNeed").textContent = need;
-    let shielded = 0;
-    let score = 0;
-    let finished = false;
-    const infected = new Set(["net"]);
-    const nodeEls = {};
+    const doneEl = hud.querySelector("#socDone");
+    const okEl = hud.querySelector("#socOk");
+    const badEl = hud.querySelector("#socBad");
 
-    // рёбра
-    const edgeEls = edges.map(([a, b]) => {
-      const n1 = byId[a],
-        n2 = byId[b];
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", n1.x);
-      line.setAttribute("y1", n1.y);
-      line.setAttribute("x2", n2.x);
-      line.setAttribute("y2", n2.y);
-      line.setAttribute("class", "ln-edge");
-      line.dataset.a = a;
-      line.dataset.b = b;
-      svg.appendChild(line);
-      // particle for infection travel
-      const pulse = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      pulse.setAttribute("r", "1.2");
-      pulse.setAttribute("class", "ln-pulse");
-      pulse.style.display = "none";
-      svg.appendChild(pulse);
-      return { a, b, line, pulse, t: 0, active: false };
-    });
+    let score = 0,
+      okN = 0,
+      badN = 0,
+      placed = 0,
+      running = true,
+      selected = null;
 
-    nodes.forEach((n) => {
-      const el = E.el(`
-        <button type="button" class="ln-node ${n.role} ${n.vuln ? "vuln" : ""} ${n.safe ? "safe" : ""}"
-          style="left:${n.x}%;top:${n.y}%" data-id="${n.id}">
-          <span class="ln-ic">${E.Icons[n.ic] || E.Icons.server}</span>
-          <b>${n.name}</b>
-          ${n.vuln ? '<i class="ln-bang">!</i>' : n.safe ? '<i class="ln-ok"></i>' : ""}
-        </button>`);
-      if (n.vuln) {
-        el.addEventListener("click", () => {
-          if (finished || n.shielded || infected.has(n.id)) return;
-          n.shielded = true;
-          shielded++;
-          score += 70;
-          el.classList.remove("vuln");
-          el.classList.add("shielded");
-          const bang = el.querySelector(".ln-bang");
-          if (bang) bang.remove();
-          hud.querySelector("#lnShield").textContent = shielded;
-          stage.feedback(true, "Щит установлен", n.issue || "");
-          stage.fly(70, el);
-          if (shielded >= need) win("Все дыры закрыты!");
-        });
-      } else if (n.safe) {
-        el.addEventListener("click", () => {
-          if (finished || el.dataset.hit) return;
-          el.dataset.hit = "1";
-          score = Math.max(0, score - 25);
-          stage.feedback(false, "Уже защищён", "Не трать время на зелёные узлы");
-          stage.fly(-25, el);
-        });
-      }
-      nodesEl.appendChild(el);
-      nodeEls[n.id] = el;
-      window.hydrateIcons(el);
-    });
-
-    function markInfected(id) {
-      if (infected.has(id)) return;
-      const n = byId[id];
-      // щит или уже «в порядке» — волна не проходит
-      if (n.shielded || n.safe) return;
-      infected.add(id);
-      const el = nodeEls[id];
-      if (el) el.classList.add("infected");
-      if (id === "core") {
-        lose("Ядро заражено");
-      }
+    function scramble(len) {
+      const chars = "01ABCDEF#$%";
+      let s = "";
+      for (let i = 0; i < len; i++) s += chars[(Math.random() * chars.length) | 0];
+      return s;
     }
 
-    function neighbors(id) {
-      return edges
-        .filter(([a, b]) => a === id || b === id)
-        .map(([a, b]) => (a === id ? b : a));
-    }
+    alerts.forEach((a) => {
+      const mon = E.el(
+        `<div class="soc-mon" draggable="true" data-uid="${a.uid}">
+          <div class="soc-bezel">
+            <div class="soc-scan"></div>
+            <div class="soc-digits" aria-hidden="true">${scramble(18)}</div>
+            <div class="soc-tag">${a.title}</div>
+            <div class="soc-body">${a.body}</div>
+          </div>
+        </div>`
+      );
+      wall.appendChild(mon);
 
-    // волна: каждые ~1.1с пытается перейти с заражённого на соседа
-    let waveTimer = null;
-    function waveStep() {
-      if (finished) return;
-      const frontier = [...infected];
-      frontier.forEach((id) => {
-        neighbors(id).forEach((nb) => {
-          const n = byId[nb];
-          if (infected.has(nb) || n.shielded || n.safe) return;
-          // анимируем импульс по ребру
-          const ed = edgeEls.find(
-            (e) => (e.a === id && e.b === nb) || (e.b === id && e.a === nb)
-          );
-          if (ed) {
-            ed.active = true;
-            ed.t = 0;
-            ed.from = id;
-            ed.to = nb;
-            ed.pulse.style.display = "block";
-            ed.line.classList.add("hot");
-          } else {
-            markInfected(nb);
-          }
-        });
+      // бегущие «цифры»
+      const dig = mon.querySelector(".soc-digits");
+      const tick = E.every(() => {
+        if (!mon.isConnected || mon.classList.contains("done")) return;
+        dig.textContent = scramble(18);
+      }, 180 + ((Math.random() * 120) | 0));
+
+      mon.addEventListener("pointerdown", () => {
+        if (!running || mon.classList.contains("done")) return;
+        wall.querySelectorAll(".soc-mon").forEach((m) => m.classList.remove("picked"));
+        mon.classList.add("picked");
+        selected = a.uid;
       });
-    }
 
-    let raf = 0;
-    function animate() {
-      edgeEls.forEach((ed) => {
-        if (!ed.active) return;
-        ed.t += 0.035;
-        const from = byId[ed.from];
-        const to = byId[ed.to];
-        const x = from.x + (to.x - from.x) * ed.t;
-        const y = from.y + (to.y - from.y) * ed.t;
-        ed.pulse.setAttribute("cx", x);
-        ed.pulse.setAttribute("cy", y);
-        if (ed.t >= 1) {
-          ed.active = false;
-          ed.pulse.style.display = "none";
-          ed.line.classList.remove("hot");
-          markInfected(ed.to);
+      mon.addEventListener("dragstart", (e) => {
+        if (!running || mon.classList.contains("done")) {
+          e.preventDefault();
+          return;
         }
+        selected = a.uid;
+        mon.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", a.uid);
+        e.dataTransfer.effectAllowed = "move";
       });
-      // подсветка заражённых рёбер
-      edgeEls.forEach((ed) => {
-        if (infected.has(ed.a) && infected.has(ed.b)) ed.line.classList.add("burn");
-      });
-      raf = requestAnimationFrame(animate);
-    }
-    raf = requestAnimationFrame(animate);
-    waveTimer = E.every(waveStep, 1100);
-    E.later(waveStep, 600);
+      mon.addEventListener("dragend", () => mon.classList.remove("dragging"));
+    });
 
-    function cleanup() {
-      cancelAnimationFrame(raf);
-      // E.every IDs are in Engine T set — clearAll on exit; stop via finished flag
+    function findAlert(uid) {
+      return alerts.find((x) => x.uid === uid);
     }
 
-    function win(msg) {
+    function place(uid, binId, binEl) {
+      if (!running) return;
+      const a = findAlert(uid);
+      const mon = wall.querySelector(`.soc-mon[data-uid="${uid}"]`);
+      if (!a || !mon || mon.classList.contains("done")) return;
+
+      mon.classList.add("done");
+      mon.classList.remove("picked", "dragging");
+      mon.setAttribute("draggable", "false");
+      placed++;
+      doneEl.textContent = placed;
+      selected = null;
+
+      const correct = a.sev === binId;
+      if (correct) {
+        score += 70;
+        okN++;
+        okEl.textContent = okN;
+        mon.classList.add("soc-ok");
+        binEl.classList.add("flash-ok");
+        E.later(() => binEl.classList.remove("flash-ok"), 320);
+        stage.feedback(true, "Верный приоритет", a.why);
+        stage.fly(70, mon);
+      } else {
+        score = Math.max(0, score - 35);
+        badN++;
+        badEl.textContent = badN;
+        mon.classList.add("soc-boom");
+        binEl.classList.add("flash-bad");
+        E.later(() => binEl.classList.remove("flash-bad"), 320);
+        const right = COLS.find((c) => c.id === a.sev);
+        stage.feedback(
+          false,
+          "Неверный приоритет!",
+          a.why + (right ? " → «" + right.label + "»" : "")
+        );
+        stage.fly(-35, mon);
+      }
+
+      if (placed >= alerts.length) finish();
+    }
+
+    bins.querySelectorAll(".soc-bin").forEach((bin) => {
+      bin.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        bin.classList.add("over");
+      });
+      bin.addEventListener("dragleave", () => bin.classList.remove("over"));
+      bin.addEventListener("drop", (e) => {
+        e.preventDefault();
+        bin.classList.remove("over");
+        const uid = e.dataTransfer.getData("text/plain") || selected;
+        if (uid) place(uid, bin.dataset.bin, bin);
+      });
+      bin.addEventListener("click", () => {
+        if (selected) place(selected, bin.dataset.bin, bin);
+      });
+    });
+
+    let finished = false;
+    function finish() {
       if (finished) return;
       finished = true;
+      running = false;
       stage.timer.stop();
-      cleanup();
-      score += 80; // бонус за удержание ядра
-      hud.querySelector("#lnStat").textContent = "удержано";
-      hud.querySelector("#lnStat").style.color = "var(--ok)";
-      stage.feedback(true, "Сеть устояла!", msg);
-      E.later(() => ctx.done({ score, detail: { shielded, need, win: true } }), 1300);
-    }
-
-    function lose(msg) {
-      if (finished) return;
-      finished = true;
-      stage.timer.stop();
-      cleanup();
-      hud.querySelector("#lnStat").textContent = "прорыв";
-      hud.querySelector("#lnStat").style.color = "var(--danger)";
-      stage.feedback(false, "Прорыв!", msg);
+      foot.querySelector("#socDoneBtn").disabled = true;
+      // бонус за скорость и чистоту
+      if (okN === alerts.length) score += 80;
+      else if (stage.timer && stage.timer.left > 12) score += 30;
+      const title =
+        okN === alerts.length
+          ? "Смена закрыта идеально"
+          : okN >= 5
+            ? "Смена удержана"
+            : "Смена в огне";
+      stage.feedback(okN >= 5, title, `Верно ${okN} из ${alerts.length}`);
       E.later(
         () =>
           ctx.done({
             score: Math.max(0, score),
-            detail: { shielded, need, win: false },
+            detail: { ok: okN, bad: badN, total: alerts.length },
           }),
         1400
       );
     }
 
-    foot.querySelector("#lnDone").addEventListener("click", () => {
-      if (shielded >= need) win("Готово — дыры закрыты");
-      else lose("Остались открытые узлы");
-    });
-
-    stage.timer.start(28, () => {
-      if (shielded >= need && !infected.has("core")) win("Время вышло — ядро цело");
-      else if (!infected.has("core") && shielded > 0)
-        lose("Не все дыры закрыты");
-      else lose("Волна прорвала периметр");
-    });
+    foot.querySelector("#socDoneBtn").addEventListener("click", finish);
+    stage.timer.start(40, finish);
   }
 };

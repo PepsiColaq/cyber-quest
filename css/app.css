@@ -150,6 +150,10 @@ body.app-open .skip-btn {
   outline: none;
   font-family: var(--font-display);
   transition: border-color var(--dur-2), box-shadow var(--dur-2);
+  margin-bottom: 22px;
+}
+.nick-wrap .btn {
+  margin-top: 4px;
 }
 .nick-input:focus {
   border-color: var(--gold);
