@@ -44,27 +44,41 @@ window.GameModules.attackmap = function (root, ctx) {
     const wrap = E.el('<div class="usb-wrap"></div>');
     stage.body.appendChild(wrap);
 
-    /* ---------- ИНТРО ---------- */
+    /* ---------- ИНТРО (строгий минимализм, CSS) ---------- */
     const intro = E.el(`
       <div class="usb-intro" id="usbIntro">
         <button type="button" class="usb-skip" id="usbSkip">Пропустить →</button>
-        <div class="usb-scene" id="usbScene">
-          <div class="usb-layer desk"></div>
-          <div class="usb-layer stick">
-            <div class="usb-flash"><span>Зарплаты_2026</span></div>
-          </div>
-          <div class="usb-layer laptop">
-            <div class="usb-port"></div>
-            <div class="usb-screen">
-              <div class="usb-win">
-                <b>setup.exe</b>
-                <p>Неизвестный издатель</p>
+        <div class="usb-stage" id="usbScene" data-phase="0">
+          <div class="usb-sky"></div>
+          <div class="usb-floor"></div>
+          <div class="usb-desk"></div>
+          <div class="usb-laptop" aria-hidden="true">
+            <div class="usb-screen-bezel">
+              <div class="usb-dialog">
+                <div class="usb-dialog-h">setup.exe</div>
+                <div class="usb-dialog-p">Неизвестный издатель</div>
                 <button type="button" class="usb-avbtn" id="usbAvBtn">Запустить антивирус</button>
               </div>
             </div>
+            <div class="usb-laptop-base">
+              <div class="usb-slot"></div>
+            </div>
           </div>
-          <div class="usb-scan"></div>
-          <div class="usb-titlecard"><span>ТЫ — МОДУЛЬ ОЧИСТКИ</span><i>USB Sentinel</i></div>
+          <div class="usb-hand" aria-hidden="true">
+            <div class="usb-palm"></div>
+            <div class="usb-finger f1"></div>
+            <div class="usb-finger f2"></div>
+            <div class="usb-finger f3"></div>
+          </div>
+          <div class="usb-drive" aria-hidden="true">
+            <div class="usb-drive-tip"></div>
+            <div class="usb-drive-body"><span>Зарплаты_2026</span></div>
+          </div>
+          <div class="usb-titlecard">
+            <span>Ты — модуль очистки</span>
+            <i>USB Sentinel</i>
+          </div>
+          <div class="usb-caption" id="usbCap">На земле лежит флешка</div>
         </div>
       </div>`);
     wrap.appendChild(intro);
@@ -92,36 +106,43 @@ window.GameModules.attackmap = function (root, ctx) {
     wrap.appendChild(gameRoot);
 
     let introDone = false;
-    let introTimer = null;
     const scene = intro.querySelector("#usbScene");
+    const cap = intro.querySelector("#usbCap");
+
+    const INTRO = [
+      { t: 0, p: "0", c: "На земле лежит флешка" },
+      { t: 1400, p: "1", c: "Рука тянется" },
+      { t: 2800, p: "2", c: "Берут флешку" },
+      { t: 4200, p: "3", c: "Подняли" },
+      { t: 5600, p: "4", c: "Дома у компьютера" },
+      { t: 7200, p: "5", c: "К разъёму USB" },
+      { t: 8600, p: "6", c: "Вставляют", sfx: "usb" },
+      { t: 10000, p: "7", c: "Подозрительный файл" },
+      { t: 11800, p: "8", c: "Запуск антивируса", sfx: "pickup" },
+      { t: 13200, p: "9", c: "", sfx: "whoosh" },
+      { t: 15000, p: null, c: "" },
+    ];
+
+    function setPhase(ph, text) {
+      scene.setAttribute("data-phase", ph);
+      if (cap) cap.textContent = text || "";
+    }
 
     function runIntro() {
-      scene.className = "usb-scene phase-desk";
-      const steps = [
-        [0, "phase-desk"],
-        [1200, "phase-grab"],
-        [2800, "phase-insert"],
-        [4500, "phase-screen"],
-        [6500, "phase-click"],
-        [8500, "phase-zoom"],
-        [11500, "phase-title"],
-        [13800, null],
-      ];
-      steps.forEach(([delay, ph]) => {
+      setPhase("0", INTRO[0].c);
+      INTRO.forEach((step) => {
         E.later(() => {
           if (introDone) return;
-          if (!ph) {
+          if (step.p == null) {
             endIntro();
             return;
           }
-          scene.className = "usb-scene " + ph;
-          if (ph === "phase-insert" && Audio()) {
+          setPhase(step.p, step.c);
+          if (step.sfx && Audio()) {
             Audio().resume();
-            Audio().sfx.usb();
+            Audio().sfx[step.sfx]();
           }
-          if (ph === "phase-zoom" && Audio()) Audio().sfx.whoosh();
-          if (ph === "phase-click" && Audio()) Audio().sfx.pickup();
-        }, delay);
+        }, step.t);
       });
     }
 
@@ -143,12 +164,15 @@ window.GameModules.attackmap = function (root, ctx) {
     });
     intro.querySelector("#usbAvBtn").addEventListener("click", (e) => {
       e.stopPropagation();
-      scene.className = "usb-scene phase-zoom";
-      if (Audio()) Audio().sfx.whoosh();
+      if (introDone) return;
+      setPhase("8", "Запуск антивируса");
+      if (Audio()) Audio().sfx.pickup();
       E.later(() => {
-        scene.className = "usb-scene phase-title";
-        E.later(endIntro, 1600);
-      }, 2800);
+        if (introDone) return;
+        setPhase("9", "");
+        if (Audio()) Audio().sfx.whoosh();
+        E.later(endIntro, 1800);
+      }, 900);
     });
 
     runIntro();
