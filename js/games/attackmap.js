@@ -1,256 +1,918 @@
-/* 11 — Карта кибератак · нейтрализуй источники атак, пока трассеры не дошли до ядра. */
+/* 11 — USB Sentinel / Страж флешки · 2D-платформер внутри флешки. */
 window.GameModules.attackmap = function (root, ctx) {
   const E = window.Engine;
+  const Audio = () => window.UsbAudio;
+
   E.intro(
     root,
     {
       id: "attackmap",
-      title: "Карта кибератак",
-      kicker: "SOC-мониторинг · 32 секунды",
-      goal: "По карте ползут трассеры к ядру в центре. Нейтрализуй источники, пока луч не дошёл.",
+      title: "Страж флешки",
+      kicker: "USB Sentinel · антивирус внутри",
+      goal: "Флешку вставили в ноут. Ты — модуль очистки: зачисти носитель, пока троян не ушёл на диск C:.",
       rules: [
-        { ic: "bolt", tone: "bad", t: "Тапай <b>красные точки</b> на краю карты — это источники атаки. <b>+45</b>." },
-        { ic: "target", tone: "gold", t: "Если луч дошёл до ядра — минус HP. Ядро в центре, жизней <b>5</b>." },
-        { ic: "clock", tone: "warn", t: "Раунд: <b>32 секунды</b>. Бонус за выжившее ядро." },
+        {
+          ic: "bolt",
+          tone: "bad",
+          t: "<b>Трояны</b> — прыжок сверху или бластер. <b>Стелкер</b> виден после сигнала SIG.db.",
+        },
+        {
+          ic: "shield",
+          tone: "ok",
+          t: "<b>Карантин (Q)</b> — клетка на врага. Зелёные файлы не бей — ложное срабатывание.",
+        },
+        {
+          ic: "key",
+          tone: "gold",
+          t: "Управление: ←→ / AD, прыжок Space, бластер J, карантин Q. На телефоне — кнопки внизу.",
+        },
       ],
     },
     () => play(root, ctx)
   );
 
   function play(root, ctx) {
-  const CX = 50,
-    CY = 54; // центр (ядро) в координатах viewBox 0..100
-
-  const stage = E.buildStage(root, {
-    id: "attackmap",
-    title: "Карта кибератак",
-    kicker: "SOC-мониторинг · 32 секунды",
-    rounds: 0,
-    timed: true,
-  });
-
-  stage.body.innerHTML = "";
-  stage.body.appendChild(
-    E.el(
-      `<div><div class="q-prompt">Отрази атаки на инфраструктуру</div>
-       <div class="q-sub">Тапай <b style="color:var(--danger)">красные источники</b>, пока их трассеры не дошли до ядра в центре.</div></div>`
-    )
-  );
-  const hud = E.el(
-    `<div class="patch-hud"><span>Ядро: <b id="amHp" style="color:var(--ok)">●●●●●</b></span><span>Отражено: <b id="amKill">0</b></span></div>`
-  );
-  stage.body.appendChild(hud);
-
-  const map = E.el(`
-    <div class="amap">
-      <svg class="am-lines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-      <div class="am-rings"><i></i><i></i><i></i></div>
-      <div class="am-core" style="left:${CX}%;top:${CY}%" data-dmg="0">
-        <span class="am-core-ic">${E.Icons.shield}</span>
-        <svg class="am-cracks" viewBox="0 0 64 64" aria-hidden="true"></svg>
-        <i class="am-shatter"></i>
-      </div>
-    </div>`);
-  stage.body.appendChild(map);
-  window.hydrateIcons(stage.body);
-
-  const svg = map.querySelector(".am-lines");
-  const coreEl = map.querySelector(".am-core");
-  const cracksSvg = coreEl.querySelector(".am-cracks");
-  const hpEl = hud.querySelector("#amHp");
-  const killEl = hud.querySelector("#amKill");
-
-  let hp = 5,
-    kills = 0,
-    score = 0,
-    running = true,
-    shattered = false;
-
-  function drawHp() {
-    hpEl.textContent = "●".repeat(Math.max(0, hp)) + "○".repeat(Math.max(0, 5 - hp));
-    const dmg = Math.min(5, Math.max(0, 5 - hp));
-    coreEl.dataset.dmg = String(dmg);
-    coreEl.classList.toggle("critical", hp <= 2 && hp > 0);
-    hpEl.style.color = hp <= 2 ? "var(--danger)" : "var(--ok)";
-  }
-  drawHp();
-
-  function pt(ang, r) {
-    return [32 + Math.cos(ang) * r, 32 + Math.sin(ang) * r];
-  }
-  function addCrack(hitAng) {
-    // трещина от края удара к центру + случайные ветки
-    const base = hitAng + (Math.random() - 0.5) * 0.9;
-    const [x0, y0] = pt(base, 28 + Math.random() * 3);
-    const [x1, y1] = pt(base + (Math.random() - 0.5) * 0.5, 18 + Math.random() * 6);
-    const [x2, y2] = pt(base + (Math.random() - 0.5) * 0.8, 8 + Math.random() * 8);
-    const [bx, by] = pt(base + (Math.random() > 0.5 ? 0.7 : -0.7), 14 + Math.random() * 8);
-    const d = `M${x0.toFixed(1)} ${y0.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)} M${x1.toFixed(1)} ${y1.toFixed(1)} L${bx.toFixed(1)} ${by.toFixed(1)}`;
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", "ck on");
-    cracksSvg.appendChild(path);
-  }
-
-  function shatterCore() {
-    if (shattered) return;
-    shattered = true;
-    const mw = map.clientWidth || 1;
-    const mh = map.clientHeight || 1;
-    const cx = (CX / 100) * mw;
-    const cy = (CY / 100) * mh;
-    coreEl.classList.add("shattering");
-    const shapes = [
-      "polygon(20% 10%, 80% 0%, 100% 60%, 40% 100%, 0% 50%)",
-      "polygon(10% 0%, 100% 20%, 70% 100%, 0% 70%)",
-      "polygon(0% 30%, 60% 0%, 100% 40%, 50% 100%, 0% 80%)",
-      "polygon(30% 0%, 100% 10%, 80% 100%, 0% 60%)",
-      "polygon(0% 0%, 100% 30%, 60% 100%, 10% 80%)",
-    ];
-    for (let i = 0; i < 11; i++) {
-      const shard = E.el('<div class="am-shard"></div>');
-      const ang = (Math.PI * 2 * i) / 11 + Math.random() * 0.4;
-      const dist = 40 + Math.random() * 90;
-      const dx = Math.cos(ang) * dist;
-      const fall = 120 + Math.random() * 160;
-      const rot = (Math.random() * 520 - 260) | 0;
-      const w = 10 + ((Math.random() * 14) | 0);
-      const h = 12 + ((Math.random() * 16) | 0);
-      shard.style.left = cx - w / 2 + "px";
-      shard.style.top = cy - h / 2 + "px";
-      shard.style.width = w + "px";
-      shard.style.height = h + "px";
-      shard.style.clipPath = shapes[i % shapes.length];
-      shard.style.setProperty("--dx", dx.toFixed(1) + "px");
-      shard.style.setProperty("--dy", fall.toFixed(1) + "px");
-      shard.style.setProperty("--rot", rot + "deg");
-      shard.style.animationDelay = (Math.random() * 0.08).toFixed(2) + "s";
-      map.appendChild(shard);
-      E.later(() => shard.remove(), 1200);
-    }
-    E.later(() => {
-      coreEl.style.opacity = "0";
-    }, 120);
-  }
-
-  const labels =
-    (window.Banks && window.Banks.attackLabels) || [
-      "C2",
-      "Сканер",
-      "Брутфорс",
-      "DDoS",
-      "Фишинг",
-    ];
-
-  function spawn() {
-    if (!running) return;
-    // источник у края по случайному углу
-    const ang = Math.random() * Math.PI * 2;
-    const ox = CX + Math.cos(ang) * 46;
-    const oy = CY + Math.sin(ang) * 42;
-    const dur = 2600 + Math.random() * 1200;
-    const tag = labels[Math.floor(Math.random() * labels.length)];
-
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", ox);
-    line.setAttribute("y1", oy);
-    line.setAttribute("x2", CX);
-    line.setAttribute("y2", CY);
-    line.setAttribute("class", "am-trace");
-    const len = Math.hypot(CX - ox, CY - oy);
-    line.style.strokeDasharray = len;
-    line.style.strokeDashoffset = len;
-    svg.appendChild(line);
-    // запустить анимацию «пробега» трассера
-    requestAnimationFrame(() => {
-      line.style.transition = `stroke-dashoffset ${dur}ms linear`;
-      line.style.strokeDashoffset = 0;
+    const stage = E.buildStage(root, {
+      id: "attackmap",
+      title: "Страж флешки",
+      kicker: "USB Sentinel · зачисти носитель",
+      rounds: 0,
+      timed: false,
     });
 
-    const dot = E.el(
-      `<div class="am-src" title="${tag}"><span class="am-ping"></span>${E.Icons.bolt}<i class="am-tag">${tag}</i></div>`
-    );
-    dot.style.left = ox + "%";
-    dot.style.top = oy + "%";
-    map.appendChild(dot);
+    stage.body.innerHTML = "";
+    const wrap = E.el('<div class="usb-wrap"></div>');
+    stage.body.appendChild(wrap);
 
-    function fireLaser() {
-      const mw = map.clientWidth || 1;
-      const mh = map.clientHeight || 1;
-      const x1 = (ox / 100) * mw;
-      const y1 = (oy / 100) * mh;
-      const x2 = (CX / 100) * mw;
-      const y2 = (CY / 100) * mh;
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const dist = Math.hypot(dx, dy);
-      const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-      const beam = E.el('<div class="am-laser"></div>');
-      beam.style.left = x1 + "px";
-      beam.style.top = y1 - 2 + "px";
-      beam.style.width = dist + "px";
-      beam.style.setProperty("--am-rot", deg + "deg");
-      beam.style.transform = "rotate(" + deg + "deg)";
-      map.appendChild(beam);
-      coreEl.classList.add("struck");
-      E.later(() => coreEl.classList.remove("struck"), 480);
-      E.later(() => beam.remove(), 420);
+    /* ---------- ИНТРО ---------- */
+    const intro = E.el(`
+      <div class="usb-intro" id="usbIntro">
+        <button type="button" class="usb-skip" id="usbSkip">Пропустить →</button>
+        <div class="usb-scene" id="usbScene">
+          <div class="usb-layer desk"></div>
+          <div class="usb-layer stick">
+            <div class="usb-flash"><span>Зарплаты_2026</span></div>
+          </div>
+          <div class="usb-layer laptop">
+            <div class="usb-port"></div>
+            <div class="usb-screen">
+              <div class="usb-win">
+                <b>setup.exe</b>
+                <p>Неизвестный издатель</p>
+                <button type="button" class="usb-avbtn" id="usbAvBtn">Запустить антивирус</button>
+              </div>
+            </div>
+          </div>
+          <div class="usb-scan"></div>
+          <div class="usb-titlecard"><span>ТЫ — МОДУЛЬ ОЧИСТКИ</span><i>USB Sentinel</i></div>
+        </div>
+      </div>`);
+    wrap.appendChild(intro);
+
+    const gameRoot = E.el(`
+      <div class="usb-game" id="usbGame" hidden>
+        <div class="usb-hud">
+          <span>Утечка C: <b id="usbTimer">90</b>с</span>
+          <span>♥ <b id="usbLives">3</b></span>
+          <span>Карантин <b id="usbQ">готов</b></span>
+          <span>SIG <b id="usbSig">нет</b></span>
+          <span>Очки <b id="usbScore">0</b></span>
+          <button type="button" class="usb-mute" id="usbMute" title="Звук">♪</button>
+        </div>
+        <canvas id="usbCanvas" width="960" height="480"></canvas>
+        <div class="usb-toast" id="usbToast" hidden></div>
+        <div class="usb-touch" id="usbTouch">
+          <button type="button" data-k="left">◀</button>
+          <button type="button" data-k="right">▶</button>
+          <button type="button" data-k="jump">⬆</button>
+          <button type="button" data-k="shoot">◎</button>
+          <button type="button" data-k="q">⌘</button>
+        </div>
+      </div>`);
+    wrap.appendChild(gameRoot);
+
+    let introDone = false;
+    let introTimer = null;
+    const scene = intro.querySelector("#usbScene");
+
+    function runIntro() {
+      scene.className = "usb-scene phase-desk";
+      const steps = [
+        [0, "phase-desk"],
+        [1200, "phase-grab"],
+        [2800, "phase-insert"],
+        [4500, "phase-screen"],
+        [6500, "phase-click"],
+        [8500, "phase-zoom"],
+        [11500, "phase-title"],
+        [13800, null],
+      ];
+      steps.forEach(([delay, ph]) => {
+        E.later(() => {
+          if (introDone) return;
+          if (!ph) {
+            endIntro();
+            return;
+          }
+          scene.className = "usb-scene " + ph;
+          if (ph === "phase-insert" && Audio()) {
+            Audio().resume();
+            Audio().sfx.usb();
+          }
+          if (ph === "phase-zoom" && Audio()) Audio().sfx.whoosh();
+          if (ph === "phase-click" && Audio()) Audio().sfx.pickup();
+        }, delay);
+      });
     }
 
-    const atk = { line, dot, dead: false, impact: null };
-    atk.impact = E.later(() => {
-      if (atk.dead || !running) return;
-      atk.dead = true;
-      fireLaser();
-      addCrack(Math.atan2(oy - CY, ox - CX));
-      hp--;
-      drawHp();
-      map.classList.add("am-hit");
-      E.later(() => map.classList.remove("am-hit"), 280);
-      line.remove();
-      dot.remove();
-      if (hp <= 0) {
-        shatterCore();
-        E.later(finish, 700);
+    function endIntro() {
+      if (introDone) return;
+      introDone = true;
+      intro.hidden = true;
+      gameRoot.hidden = false;
+      if (Audio()) {
+        Audio().resume();
+        Audio().startBgm();
       }
-    }, dur);
+      startPlatformer();
+    }
 
-    dot.addEventListener("pointerdown", (e) => {
-      if (e && e.cancelable) e.preventDefault();
-      if (!running || atk.dead) return;
-      atk.dead = true;
-      clearTimeout(atk.impact);
-      kills++;
-      score += 45;
-      killEl.textContent = kills;
-      stage.fly(45, dot);
-      dot.classList.add("am-killed");
-      line.style.stroke = "var(--ok)";
-      E.later(() => {
-        dot.remove();
-        line.remove();
-      }, 220);
+    intro.querySelector("#usbSkip").addEventListener("click", () => {
+      if (Audio()) Audio().resume();
+      endIntro();
     });
-  }
+    intro.querySelector("#usbAvBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      scene.className = "usb-scene phase-zoom";
+      if (Audio()) Audio().sfx.whoosh();
+      E.later(() => {
+        scene.className = "usb-scene phase-title";
+        E.later(endIntro, 1600);
+      }, 2800);
+    });
 
-  const spawner = E.every(spawn, 950);
-  spawn();
+    runIntro();
 
-  let done = false;
-  function finish() {
-    if (done) return;
-    done = true;
-    running = false;
-    clearInterval(spawner);
-    stage.timer.stop();
-    map.querySelectorAll(".am-src").forEach((d) => d.remove());
-    map.querySelectorAll(".am-trace").forEach((l) => l.remove());
-    // оставшиеся таймеры impact уже проверяют !running
-    if (hp > 0) score += hp * 15;
-    stage.feedback(hp > 0, hp > 0 ? "Атаки отражены!" : "Ядро пробито", `Отражено: ${kills}`);
-    E.later(() => ctx.done({ score: Math.max(0, score), detail: { kills, hp } }), 1400);
-  }
+    /* ---------- ПЛАТФОРМЕР ---------- */
+    function startPlatformer() {
+      const canvas = gameRoot.querySelector("#usbCanvas");
+      const c = canvas.getContext("2d");
+      const W = canvas.width;
+      const H = canvas.height;
 
-  stage.timer.start(32, finish);
+      const keys = {};
+      const bindKey = (k, v) => {
+        keys[k] = v;
+      };
+      const onKey = (e, down) => {
+        const k = e.key.toLowerCase();
+        if (["arrowleft", "a"].includes(k)) bindKey("left", down);
+        if (["arrowright", "d"].includes(k)) bindKey("right", down);
+        if ([" ", "w", "arrowup"].includes(k)) {
+          bindKey("jump", down);
+          if (down) e.preventDefault();
+        }
+        if (["j"].includes(k)) bindKey("shoot", down);
+        if (["q", "k"].includes(k)) bindKey("q", down);
+      };
+      window.addEventListener("keydown", (e) => onKey(e, true));
+      window.addEventListener("keyup", (e) => onKey(e, false));
+      canvas.addEventListener("mousedown", (e) => {
+        if (e.button === 0) keys.shoot = true;
+        if (e.button === 2) {
+          e.preventDefault();
+          keys.q = true;
+        }
+      });
+      canvas.addEventListener("mouseup", (e) => {
+        if (e.button === 0) keys.shoot = false;
+        if (e.button === 2) keys.q = false;
+      });
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      gameRoot.querySelectorAll("#usbTouch button").forEach((btn) => {
+        const k = btn.dataset.k;
+        const set = (v) => (keys[k] = v);
+        btn.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          set(true);
+        });
+        btn.addEventListener("pointerup", () => set(false));
+        btn.addEventListener("pointerleave", () => set(false));
+      });
+
+      gameRoot.querySelector("#usbMute").addEventListener("click", () => {
+        if (!Audio()) return;
+        Audio().setMuted(!Audio().isMuted());
+        const btn = gameRoot.querySelector("#usbMute");
+        btn.textContent = Audio().isMuted() ? "🔇" : "♪";
+        btn.classList.toggle("is-off", Audio().isMuted());
+        if (!Audio().isMuted()) Audio().startBgm();
+        else Audio().stopBgm();
+      });
+
+      // ---- level ----
+      const TILE = 40;
+      const levelW = 96; // tiles
+      const solids = []; // {x,y,w,h,type,label?}
+      const entities = [];
+      const pending = [];
+      const bullets = [];
+      const particles = [];
+
+      function addPlat(tx, ty, tw, th, type, label) {
+        solids.push({
+          x: tx * TILE,
+          y: ty * TILE,
+          w: tw * TILE,
+          h: th * TILE,
+          type: type || "ground",
+          label: label || "",
+          broken: false,
+        });
+      }
+
+      // ground strips
+      for (let x = 0; x < 14; x++) addPlat(x, 10, 1, 2, "ground");
+      addPlat(14, 9, 4, 1, "ground");
+      addPlat(19, 8, 3, 1, "safe", "диплом.pdf");
+      addPlat(23, 7, 3, 1, "safe", "фото.jpg");
+      addPlat(27, 9, 5, 1, "ground");
+      for (let x = 32; x < 42; x++) addPlat(x, 10, 1, 2, "ground");
+      addPlat(36, 7, 2, 1, "ground");
+      addPlat(40, 5, 2, 1, "sig", "SIG.db");
+      addPlat(44, 8, 4, 1, "ground");
+      addPlat(49, 10, 6, 2, "ground");
+      // fork platforms
+      addPlat(56, 9, 3, 1, "choiceBad", "Удалить всё");
+      addPlat(61, 9, 3, 1, "choiceGood", "По сигнатуре");
+      addPlat(66, 10, 4, 2, "ground");
+      // bridge (opens on good choice)
+      addPlat(70, 9, 5, 1, "bridge", "");
+      solids[solids.length - 1].hidden = true;
+      // spikes alt path + emergency platforms
+      addPlat(70, 11, 5, 1, "spike", "");
+      addPlat(71, 7, 1, 1, "ground");
+      addPlat(73, 6, 1, 1, "ground");
+      addPlat(75, 8, 1, 1, "ground");
+      // boss arena
+      for (let x = 76; x < 94; x++) addPlat(x, 10, 1, 2, "ground");
+      addPlat(82, 6, 6, 1, "ground");
+      // eject
+      addPlat(94, 8, 2, 1, "exit", "EJECT");
+
+      // walls / ceiling hints
+      addPlat(-1, 0, 1, 14, "wall");
+      addPlat(levelW, 0, 1, 14, "wall");
+
+      function spawnEnemy(type, tx, ty, queue) {
+        const e = {
+          type,
+          x: tx * TILE,
+          y: ty * TILE,
+          w: type === "boss" ? 80 : 28,
+          h: type === "boss" ? 72 : 28,
+          vx: type === "trojan" || type === "minion" ? 1.2 : type === "stalker" ? 0.9 : type === "worm" ? 1.0 : 0,
+          dir: 1,
+          hp: type === "boss" ? 3 : 1,
+          alive: true,
+          quarantine: 0,
+          blink: 0,
+          split: type === "worm",
+        };
+        (queue || entities).push(e);
+      }
+
+      spawnEnemy("trojan", 8, 9);
+      spawnEnemy("trojan", 28, 8);
+      spawnEnemy("stalker", 45, 7);
+      spawnEnemy("worm", 50, 9);
+      spawnEnemy("boss", 84, 8);
+
+      const player = {
+        x: 2 * TILE,
+        y: 8 * TILE,
+        w: 28,
+        h: 28,
+        vx: 0,
+        vy: 0,
+        onGround: false,
+        facing: 1,
+        lives: 3,
+        score: 0,
+        inv: 0,
+        stun: 0,
+        hasSig: false,
+        qCd: 0,
+        shootCd: 0,
+        jumpBuf: 0,
+        anim: 0,
+      };
+
+      let camX = 0;
+      let leak = 90;
+      let running = true;
+      let finished = false;
+      let shake = 0;
+      let choiceDone = false;
+      let bossQ = 0;
+      let bossSpawn = 0;
+      let toastT = 0;
+      let shootHeld = false;
+      let qHeld = false;
+      let jumpHeld = false;
+
+      const elTimer = gameRoot.querySelector("#usbTimer");
+      const elLives = gameRoot.querySelector("#usbLives");
+      const elQ = gameRoot.querySelector("#usbQ");
+      const elSig = gameRoot.querySelector("#usbSig");
+      const elScore = gameRoot.querySelector("#usbScore");
+      const elToast = gameRoot.querySelector("#usbToast");
+
+      function toast(msg, ms) {
+        elToast.hidden = false;
+        elToast.textContent = msg;
+        toastT = ms || 1800;
+      }
+
+      function aabb(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+      }
+
+      function rect(x, y, w, h) {
+        return { x, y, w, h };
+      }
+
+      function killEnemy(e, pts) {
+        if (!e.alive) return;
+        e.alive = false;
+        player.score += pts || 40;
+        if (Audio()) Audio().sfx.hit();
+        for (let i = 0; i < 8; i++) {
+          particles.push({
+            x: e.x + e.w / 2,
+            y: e.y + e.h / 2,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6 - 2,
+            life: 30,
+            color: e.type === "stalker" ? "#8a7bff" : "#ff6b6b",
+          });
+        }
+        if (e.type === "boss") {
+          toast("autorun.inf уничтожен! К EJECT →", 2200);
+          solids.forEach((s) => {
+            if (s.type === "bridge") s.hidden = false;
+          });
+          // open path after boss - ensure exit reachable
+          addPlat(90, 9, 4, 1, "ground");
+        }
+      }
+
+      function hurtPlayer() {
+        if (player.inv > 0 || player.stun > 0) return;
+        player.lives--;
+        player.inv = 90;
+        player.vy = -6;
+        shake = 10;
+        if (Audio()) Audio().sfx.falsePos();
+        elLives.textContent = player.lives;
+        if (player.lives <= 0) endGame(false);
+      }
+
+      function endGame(win) {
+        if (finished) return;
+        finished = true;
+        running = false;
+        if (Audio()) {
+          Audio().stopBgm();
+          if (win) Audio().sfx.win();
+          else Audio().sfx.lose();
+        }
+        const bonus = win ? Math.max(0, Math.floor(leak) * 2) : 0;
+        player.score = Math.max(0, player.score + bonus);
+        stage.feedback(
+          win,
+          win ? "Носитель чист!" : "Троян на C:",
+          win
+            ? "Не вставляй чужие флешки. Не запускай .exe — отдай в ИБ."
+            : "Утечка на хост. Флешку следовало не открывать."
+        );
+        E.later(
+          () =>
+            ctx.done({
+              score: Math.min(900, player.score),
+              detail: { win, leak: Math.floor(leak), lives: player.lives },
+            }),
+          1800
+        );
+      }
+
+      function tryShoot() {
+        if (player.shootCd > 0 || player.stun > 0) return;
+        player.shootCd = 18;
+        bullets.push({
+          x: player.x + (player.facing > 0 ? player.w : -8),
+          y: player.y + 10,
+          w: 14,
+          h: 6,
+          vx: player.facing * 9,
+          life: 45,
+        });
+        if (Audio()) Audio().sfx.shoot();
+      }
+
+      function tryQuarantine() {
+        if (player.qCd > 0 || player.stun > 0) return;
+        player.qCd = 240; // 4s at 60fps
+        if (Audio()) Audio().sfx.quarantine();
+        shake = 6;
+        const zone = rect(player.x - 50, player.y - 40, player.w + 100, player.h + 80);
+        entities.forEach((e) => {
+          if (!e.alive) return;
+          if (!aabb(zone, e)) return;
+          if (e.type === "boss") {
+            bossQ = 180; // 3s
+            e.quarantine = 180;
+            toast("Дверь autorun в карантине!", 1500);
+          } else {
+            e.quarantine = 72;
+          }
+        });
+      }
+
+      let last = performance.now();
+      let accLeak = 0;
+
+      function update(dt) {
+        if (!running) return;
+        player.anim++;
+        if (toastT > 0) {
+          toastT -= dt * 1000;
+          if (toastT <= 0) elToast.hidden = true;
+        }
+        if (shake > 0) shake--;
+        if (player.inv > 0) player.inv--;
+        if (player.stun > 0) player.stun--;
+        if (player.shootCd > 0) player.shootCd--;
+        if (player.qCd > 0) player.qCd--;
+        if (bossQ > 0) bossQ--;
+
+        accLeak += dt;
+        if (accLeak >= 1) {
+          accLeak = 0;
+          leak--;
+          elTimer.textContent = Math.max(0, leak);
+          if (leak <= 0) endGame(false);
+        }
+
+        elQ.textContent = player.qCd > 0 ? Math.ceil(player.qCd / 60) + "с" : "готов";
+        elSig.textContent = player.hasSig ? "есть" : "нет";
+        elScore.textContent = player.score;
+        elQ.style.color = player.qCd > 0 ? "var(--warn)" : "var(--ok)";
+
+        // input
+        if (player.stun <= 0) {
+          let move = 0;
+          if (keys.left) move -= 1;
+          if (keys.right) move += 1;
+          player.vx = move * 4.2;
+          if (move) player.facing = move;
+          if (move && player.onGround && Audio()) Audio().sfx.step();
+
+          if (keys.jump && !jumpHeld && player.onGround) {
+            player.vy = -11.2;
+            player.onGround = false;
+            if (Audio()) Audio().sfx.jump();
+          }
+          jumpHeld = !!keys.jump;
+
+          if (keys.shoot && !shootHeld) tryShoot();
+          shootHeld = !!keys.shoot;
+
+          if (keys.q && !qHeld) tryQuarantine();
+          qHeld = !!keys.q;
+        } else {
+          player.vx *= 0.8;
+        }
+
+        player.vy += 0.55;
+        if (player.vy > 14) player.vy = 14;
+
+        // move X
+        player.x += player.vx;
+        solids.forEach((s) => {
+          if (s.hidden || s.broken || s.type === "spike") return;
+          if (s.type === "sig" || s.type === "exit" || s.type === "choiceBad" || s.type === "choiceGood")
+            return;
+          if (!aabb(player, s)) return;
+          if (player.vx > 0) player.x = s.x - player.w;
+          else if (player.vx < 0) player.x = s.x + s.w;
+        });
+
+        // move Y
+        player.y += player.vy;
+        player.onGround = false;
+        solids.forEach((s) => {
+          if (s.hidden || s.broken) return;
+          if (s.type === "sig" || s.type === "exit" || s.type === "choiceBad" || s.type === "choiceGood")
+            return;
+          if (s.type === "spike") {
+            if (aabb(player, s)) hurtPlayer();
+            return;
+          }
+          if (!aabb(player, s)) return;
+          if (player.vy > 0) {
+            player.y = s.y - player.h;
+            player.vy = 0;
+            if (!player.onGround && Audio()) Audio().sfx.land();
+            player.onGround = true;
+          } else if (player.vy < 0) {
+            player.y = s.y + s.h;
+            player.vy = 0;
+          }
+        });
+
+        if (player.y > H + 80) {
+          player.y = 6 * TILE;
+          player.x = Math.max(TILE, camX + 40);
+          hurtPlayer();
+        }
+
+        // pickups / choices / exit
+        solids.forEach((s) => {
+          if (s.broken || s.hidden) return;
+          if (!aabb(player, s)) return;
+          if (s.type === "sig" && !player.hasSig) {
+            player.hasSig = true;
+            s.broken = true;
+            player.score += 40;
+            if (Audio()) Audio().sfx.pickup();
+            toast("SIG.db загружена — стелкеры видны", 2000);
+          }
+          if (s.type === "exit") {
+            const bossDead = !entities.some((e) => e.type === "boss" && e.alive);
+            if (bossDead) endGame(true);
+            else toast("Сначала уничтожь autorun.inf", 1500);
+          }
+          if (!choiceDone && (s.type === "choiceBad" || s.type === "choiceGood")) {
+            choiceDone = true;
+            if (s.type === "choiceBad") {
+              player.score = Math.max(0, player.score - 40);
+              solids.forEach((p) => {
+                if (p.type === "safe") p.broken = true;
+              });
+              solids.forEach((p) => {
+                if (p.type === "bridge") p.hidden = true;
+              });
+              toast("Слишком агрессивный AV (−40)", 2000);
+              if (Audio()) Audio().sfx.falsePos();
+            } else {
+              player.score += 30;
+              solids.forEach((p) => {
+                if (p.type === "bridge") p.hidden = false;
+                if (p.type === "spike") p.broken = true;
+              });
+              toast("Умная политика (+30)", 2000);
+              if (Audio()) Audio().sfx.pickup();
+            }
+          }
+        });
+
+        // enemies
+        entities.forEach((e) => {
+          if (!e.alive) return;
+          if (e.quarantine > 0) {
+            e.quarantine--;
+            return;
+          }
+          if (e.type === "boss") {
+            e.blink = bossQ > 0 ? 0 : (e.blink + 1) % 40;
+            if (bossQ <= 0) {
+              bossSpawn++;
+              if (bossSpawn >= 180) {
+                bossSpawn = 0;
+                if (Audio()) Audio().sfx.boss();
+                spawnEnemy("minion", 80 + Math.random() * 6, 9, pending);
+                spawnEnemy("minion", 86 + Math.random() * 4, 9, pending);
+              }
+            }
+            return;
+          }
+          e.x += e.vx * e.dir;
+          // reverse on ledge / wall
+          const foot = rect(e.x + (e.dir > 0 ? e.w : -2), e.y + e.h + 1, 4, 4);
+          let ground = false;
+          solids.forEach((s) => {
+            if (s.hidden || s.broken || s.type === "spike") return;
+            if (["ground", "safe", "bridge"].includes(s.type) && aabb(foot, s)) ground = true;
+            if (aabb(e, s) && ["ground", "wall", "safe", "bridge"].includes(s.type)) e.dir *= -1;
+          });
+          if (!ground) e.dir *= -1;
+
+          if (e.type === "stalker" && !player.hasSig) {
+            // still collides
+          }
+
+          // stomp
+          if (
+            player.vy > 0 &&
+            player.y + player.h < e.y + e.h * 0.55 &&
+            aabb(player, e)
+          ) {
+            if (e.type === "stalker" && !player.hasSig) {
+              /* can't stomp invisible well - still works if land */
+            }
+            if (e.type === "boss") {
+              if (bossQ > 0) {
+                e.hp--;
+                player.vy = -8;
+                if (e.hp <= 0) killEnemy(e, 150);
+                else if (Audio()) Audio().sfx.hit();
+              }
+            } else {
+              if (e.split && e.quarantine <= 0 && Math.random() < 0.35) {
+                e.alive = false;
+                spawnEnemy("minion", e.x / TILE, e.y / TILE, pending);
+                spawnEnemy("minion", e.x / TILE + 0.5, e.y / TILE, pending);
+                player.vy = -7;
+                if (Audio()) Audio().sfx.hit();
+              } else {
+                killEnemy(e, e.type === "stalker" ? 60 : e.type === "worm" ? 50 : 40);
+                player.vy = -7;
+              }
+            }
+          } else if (aabb(player, e)) {
+            if (e.type === "stalker" && !player.hasSig) {
+              // hard to see but still hurts
+            }
+            hurtPlayer();
+          }
+        });
+
+        // bullets
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i];
+          b.x += b.vx;
+          b.life--;
+          let dead = b.life <= 0;
+          solids.forEach((s) => {
+            if (dead || s.hidden || s.broken) return;
+            if (s.type === "safe" && aabb(b, s)) {
+              dead = true;
+              player.score = Math.max(0, player.score - 25);
+              player.stun = 24;
+              toast("ЛОЖНОЕ СРАБАТЫВАНИЕ (−25)", 1600);
+              if (Audio()) Audio().sfx.falsePos();
+            } else if (
+              ["ground", "wall", "bridge"].includes(s.type) &&
+              aabb(b, s)
+            )
+              dead = true;
+          });
+          entities.forEach((e) => {
+            if (!e.alive || dead) return;
+            if (!aabb(b, e)) return;
+            if (e.type === "stalker" && !player.hasSig) return;
+            if (e.type === "boss" && bossQ <= 0) {
+              dead = true;
+              return;
+            }
+            dead = true;
+            if (e.split && e.quarantine <= 0 && Math.random() < 0.4) {
+              e.alive = false;
+              spawnEnemy("minion", e.x / TILE, e.y / TILE, pending);
+              spawnEnemy("minion", (e.x + 20) / TILE, e.y / TILE, pending);
+              if (Audio()) Audio().sfx.hit();
+            } else if (e.type === "boss") {
+              e.hp--;
+              if (e.hp <= 0) killEnemy(e, 150);
+              else if (Audio()) Audio().sfx.hit();
+            } else {
+              killEnemy(e, e.type === "stalker" ? 60 : 40);
+            }
+          });
+          if (dead) bullets.splice(i, 1);
+        }
+
+        particles.forEach((p) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.2;
+          p.life--;
+        });
+        for (let i = particles.length - 1; i >= 0; i--) if (particles[i].life <= 0) particles.splice(i, 1);
+        while (pending.length) entities.push(pending.pop());
+
+        // camera
+        const target = player.x - W * 0.35;
+        camX += (target - camX) * 0.12;
+        camX = Math.max(0, Math.min(camX, levelW * TILE - W));
+      }
+
+      function draw() {
+        const sx = shake ? (Math.random() - 0.5) * shake : 0;
+        const sy = shake ? (Math.random() - 0.5) * shake : 0;
+        c.save();
+        c.translate(-camX + sx, sy);
+
+        // bg
+        const grd = c.createLinearGradient(camX, 0, camX, H);
+        grd.addColorStop(0, "#05070c");
+        grd.addColorStop(1, "#0b1520");
+        c.fillStyle = grd;
+        c.fillRect(camX, 0, W, H);
+
+        // grid
+        c.strokeStyle = "rgba(88,224,216,0.05)";
+        c.lineWidth = 1;
+        for (let x = Math.floor(camX / TILE) * TILE; x < camX + W; x += TILE) {
+          c.beginPath();
+          c.moveTo(x, 0);
+          c.lineTo(x, H);
+          c.stroke();
+        }
+
+        // contacts glow line
+        c.fillStyle = "rgba(232,195,106,0.08)";
+        c.fillRect(camX, H - 28, W, 28);
+
+        solids.forEach((s) => {
+          if (s.hidden || s.broken) return;
+          if (s.x + s.w < camX - 20 || s.x > camX + W + 20) return;
+          if (s.type === "wall") return;
+          if (s.type === "spike") {
+            c.fillStyle = "#ff6b6b";
+            for (let i = 0; i < s.w; i += 12) {
+              c.beginPath();
+              c.moveTo(s.x + i, s.y + s.h);
+              c.lineTo(s.x + i + 6, s.y);
+              c.lineTo(s.x + i + 12, s.y + s.h);
+              c.fill();
+            }
+            return;
+          }
+          if (s.type === "safe") {
+            c.fillStyle = "rgba(88,224,216,0.25)";
+            c.strokeStyle = "#58e0d8";
+          } else if (s.type === "sig") {
+            c.fillStyle = "rgba(232,195,106,0.35)";
+            c.strokeStyle = "#e8c36a";
+          } else if (s.type === "choiceBad") {
+            c.fillStyle = "rgba(255,107,107,0.25)";
+            c.strokeStyle = "#ff6b6b";
+          } else if (s.type === "choiceGood") {
+            c.fillStyle = "rgba(79,211,150,0.25)";
+            c.strokeStyle = "#4fd396";
+          } else if (s.type === "exit") {
+            c.fillStyle = "rgba(232,195,106,0.4)";
+            c.strokeStyle = "#e8c36a";
+          } else if (s.type === "bridge") {
+            c.fillStyle = "rgba(88,224,216,0.3)";
+            c.strokeStyle = "#58e0d8";
+          } else {
+            c.fillStyle = "rgba(232,195,106,0.2)";
+            c.strokeStyle = "#e8c36a";
+          }
+          c.lineWidth = 2;
+          roundRect(c, s.x, s.y, s.w, s.h, 6);
+          c.fill();
+          c.stroke();
+          if (s.label) {
+            c.fillStyle = "#eef2f8";
+            c.font = "11px JetBrains Mono, monospace";
+            c.fillText(s.label, s.x + 6, s.y + s.h / 2 + 4);
+          }
+        });
+
+        // entities
+        entities.forEach((e) => {
+          if (!e.alive) return;
+          if (e.x + e.w < camX - 40 || e.x > camX + W + 40) return;
+          const qx = e.quarantine > 0;
+          if (e.type === "boss") {
+            c.save();
+            if (bossQ > 0) {
+              c.strokeStyle = "#58e0d8";
+              c.lineWidth = 3;
+              c.strokeRect(e.x - 4, e.y - 4, e.w + 8, e.h + 8);
+            }
+            c.fillStyle = e.blink < 20 && bossQ <= 0 ? "#ff3b3b" : "#5a1020";
+            roundRect(c, e.x, e.y, e.w, e.h, 8);
+            c.fill();
+            c.fillStyle = "#fff";
+            c.font = "bold 12px Manrope, sans-serif";
+            c.fillText("autorun.inf", e.x + 8, e.y + 24);
+            c.fillText("▶ AUTO", e.x + 18, e.y + 44);
+            if (bossQ > 0) {
+              c.fillStyle = "#ff6b6b";
+              c.beginPath();
+              c.arc(e.x + e.w / 2, e.y + e.h / 2 + 8, 10, 0, Math.PI * 2);
+              c.fill();
+            }
+            c.restore();
+            return;
+          }
+          if (e.type === "stalker" && !player.hasSig) {
+            c.strokeStyle = "rgba(138,123,255,0.5)";
+            c.lineWidth = 2;
+            c.setLineDash([4, 4]);
+            c.strokeRect(e.x, e.y, e.w, e.h);
+            c.setLineDash([]);
+          } else {
+            c.fillStyle =
+              e.type === "stalker" ? "#8a7bff" : e.type === "worm" || e.type === "minion" ? "#ff8e5a" : "#ff6b6b";
+            roundRect(c, e.x, e.y, e.w, e.h, 6);
+            c.fill();
+            c.fillStyle = "#fff";
+            c.font = "10px monospace";
+            c.fillText(
+              e.type === "stalker" ? "KL" : e.type === "trojan" ? "TR" : "W",
+              e.x + 8,
+              e.y + 20
+            );
+          }
+          if (qx) {
+            c.strokeStyle = "#58e0d8";
+            c.lineWidth = 2;
+            c.strokeRect(e.x - 3, e.y - 3, e.w + 6, e.h + 6);
+          }
+        });
+
+        bullets.forEach((b) => {
+          c.fillStyle = "#58e0d8";
+          c.shadowColor = "#58e0d8";
+          c.shadowBlur = 8;
+          c.fillRect(b.x, b.y, b.w, b.h);
+          c.shadowBlur = 0;
+        });
+
+        particles.forEach((p) => {
+          c.globalAlpha = Math.max(0, p.life / 30);
+          c.fillStyle = p.color;
+          c.fillRect(p.x, p.y, 3, 3);
+          c.globalAlpha = 1;
+        });
+
+        // player sentinel drone
+        if (player.inv <= 0 || player.anim % 6 < 3) {
+          const px = player.x;
+          const py = player.y;
+          c.fillStyle = "#e8c36a";
+          roundRect(c, px, py + 4, player.w, player.h - 4, 8);
+          c.fill();
+          c.fillStyle = "#58e0d8";
+          c.beginPath();
+          c.arc(px + player.w / 2 + player.facing * 2, py + 14, 5, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = "rgba(232,195,106,0.5)";
+          c.fillRect(px + 4, py + player.h - 2, 8, 4);
+          c.fillRect(px + player.w - 12, py + player.h - 2, 8, 4);
+          if (player.facing > 0) {
+            c.fillStyle = "#58e0d8";
+            c.fillRect(px + player.w - 2, py + 12, 6, 3);
+          } else {
+            c.fillStyle = "#58e0d8";
+            c.fillRect(px - 4, py + 12, 6, 3);
+          }
+        }
+
+        // section labels
+        drawLabel(c, 3 * TILE, 60, "E:\\ BOOT");
+        drawLabel(c, 20 * TILE, 40, "Documents");
+        drawLabel(c, 40 * TILE, 40, "Hidden\\System");
+        drawLabel(c, 56 * TILE, 40, "Policy");
+        drawLabel(c, 80 * TILE, 40, "autorun gate");
+
+        c.restore();
+      }
+
+      function drawLabel(ctx2, x, y, text) {
+        ctx2.fillStyle = "rgba(167,176,194,0.45)";
+        ctx2.font = "12px JetBrains Mono, monospace";
+        ctx2.fillText(text, x, y);
+      }
+
+      function roundRect(ctx2, x, y, w, h, r) {
+        ctx2.beginPath();
+        ctx2.moveTo(x + r, y);
+        ctx2.arcTo(x + w, y, x + w, y + h, r);
+        ctx2.arcTo(x + w, y + h, x, y + h, r);
+        ctx2.arcTo(x, y + h, x, y, r);
+        ctx2.arcTo(x, y, x + w, y, r);
+        ctx2.closePath();
+      }
+
+      function frame(now) {
+        if (finished) return;
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        update(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+
+      // cleanup listeners roughly via Engine.clearAll on exit — keys stay; acceptable for booth
+    }
   }
 };
