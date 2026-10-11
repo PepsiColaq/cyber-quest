@@ -167,7 +167,8 @@ window.GameModules.network = function (root, ctx) {
     function markInfected(id) {
       if (infected.has(id)) return;
       const n = byId[id];
-      if (n.shielded) return; // щит держит
+      // щит или уже «в порядке» — волна не проходит
+      if (n.shielded || n.safe) return;
       infected.add(id);
       const el = nodeEls[id];
       if (el) el.classList.add("infected");
@@ -190,7 +191,7 @@ window.GameModules.network = function (root, ctx) {
       frontier.forEach((id) => {
         neighbors(id).forEach((nb) => {
           const n = byId[nb];
-          if (infected.has(nb) || n.shielded) return;
+          if (infected.has(nb) || n.shielded || n.safe) return;
           // анимируем импульс по ребру
           const ed = edgeEls.find(
             (e) => (e.a === id && e.b === nb) || (e.b === id && e.a === nb)

@@ -207,7 +207,10 @@ window.GameModules.cipher = function (root, ctx) {
         cancelAnimationFrame(anim);
       }
 
+      let submitted = false;
       function submit(timeout) {
+        if (submitted) return;
+        submitted = true;
         stage.timer.stop();
         cleanup();
         range.disabled = true;

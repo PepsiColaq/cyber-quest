@@ -104,9 +104,9 @@ window.GameModules.attackmap = function (root, ctx) {
     dot.style.top = oy + "%";
     map.appendChild(dot);
 
-    const atk = { line, dot, dead: false };
-    const impact = E.later(() => {
-      if (atk.dead) return;
+    const atk = { line, dot, dead: false, impact: null };
+    atk.impact = E.later(() => {
+      if (atk.dead || !running) return;
       atk.dead = true;
       hp--;
       drawHp();
@@ -117,10 +117,11 @@ window.GameModules.attackmap = function (root, ctx) {
       if (hp <= 0) finish();
     }, dur);
 
-    dot.addEventListener("click", () => {
+    dot.addEventListener("pointerdown", (e) => {
+      if (e && e.cancelable) e.preventDefault();
       if (!running || atk.dead) return;
       atk.dead = true;
-      clearTimeout(impact);
+      clearTimeout(atk.impact);
       kills++;
       score += 45;
       killEl.textContent = kills;
@@ -146,6 +147,7 @@ window.GameModules.attackmap = function (root, ctx) {
     stage.timer.stop();
     map.querySelectorAll(".am-src").forEach((d) => d.remove());
     map.querySelectorAll(".am-trace").forEach((l) => l.remove());
+    // оставшиеся таймеры impact уже проверяют !running
     if (hp > 0) score += hp * 15;
     stage.feedback(hp > 0, hp > 0 ? "Атаки отражены!" : "Ядро пробито", `Отражено: ${kills}`);
     E.later(() => ctx.done({ score: Math.max(0, score), detail: { kills, hp } }), 1400);

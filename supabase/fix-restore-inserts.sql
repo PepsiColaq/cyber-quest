@@ -2,6 +2,9 @@
 -- СРОЧНО: после harden пропали INSERT для игры.
 -- Восстанавливает запись игрока, НЕ открывая дыры обратно.
 -- Запусти в SQL Editor → Run.
+--
+-- Важно: SELECT на attempts/game_runs у anon нет — так и надо.
+-- Клиент пишет с Prefer: return=minimal (без RETURNING).
 -- ============================================================
 
 -- Права на таблицы (без SELECT attempts / без UPDATE runs&attempts)

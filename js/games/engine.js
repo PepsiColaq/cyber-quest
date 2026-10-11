@@ -309,8 +309,10 @@ window.Engine = (function () {
       opts.querySelectorAll(".opt").forEach((b) => b.classList.add("locked"));
     }
 
+    let advancing = false;
+
     function pick(btn, o, opts, r) {
-      if (btn.classList.contains("locked")) return;
+      if (btn.classList.contains("locked") || advancing) return;
       if (stage.timer) stage.timer.stop();
       lockAll(opts);
       const pts = spec.perRound || 100;
@@ -325,7 +327,7 @@ window.Engine = (function () {
         btn.classList.add("wrong");
         stage.dot(idx, "bad");
         // подсветить правильный
-        opts.querySelectorAll(".opt").forEach((b, i) => {
+        opts.querySelectorAll(".opt").forEach((b) => {
           const label = b.querySelector("span:last-child").textContent;
           const match = r.options.find((x) => x.label === label);
           if (match && match.ok) b.classList.add("correct");
@@ -336,8 +338,12 @@ window.Engine = (function () {
     }
 
     function next() {
+      if (advancing) return;
+      advancing = true;
+      if (stage.timer) stage.timer.stop();
       idx++;
       later(() => {
+        advancing = false;
         if (idx >= rounds.length) {
           ctx.done({
             score,

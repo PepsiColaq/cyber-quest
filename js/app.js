@@ -203,7 +203,9 @@ window.App = (function () {
     // кнопка «итоги» в шапке, если что-то сыграно
     const head = $(".hub-head .row");
     let res = $("#toResult");
-    if (state.played.size > 0 && !res) {
+    if (state.played.size === 0) {
+      if (res) res.remove();
+    } else if (!res && head) {
       res = document.createElement("button");
       res.id = "toResult";
       res.className = "btn btn-primary btn-sm";
@@ -258,32 +260,25 @@ window.App = (function () {
     // игнорируем «догоняющие» вызовы после выхода/смены экрана (стенд, idle-reset)
     if (!document.body.classList.contains("app-open")) return;
     if (!$("#scrGame").classList.contains("active")) return;
-    if (state.activeGameId && state.activeGameId !== id) return;
+    // строгий once-guard: не принимать «догоняющий» done
+    if (state.activeGameId !== id) return;
     const Guard = window.GameGuard;
     let score = Math.max(0, Math.round(res.score || 0));
     if (Guard) score = Guard.clampGameScore(id, score, res.durationMs);
     const prev = state.gameScores[id] || 0;
-    if (state.played.has(id)) state.score += score - prev;
-    else state.score += score;
+    const best = Math.max(prev, score);
+    state.gameScores[id] = best;
+    // итог = сумма лучших по миссиям (повтор хуже не уменьшает HUD)
+    state.score = Object.values(state.gameScores).reduce((s, n) => s + (n || 0), 0);
     if (Guard) state.score = Guard.clampTotal(state.score);
-    state.gameScores[id] = Math.max(prev, score);
     state.details[id] = res.detail || {};
     state.played.add(id);
     state.activeGameId = null;
     setHud();
     if (Cloud()) {
+      // пишем только game_runs; итоговый attempts — один раз в openResults
       Promise.resolve(Cloud().endGame(state.nick, id, score, res.detail || {}))
-        .then(() =>
-          Cloud().syncProgress({
-            nick: state.nick,
-            score: state.score,
-            rank: rankFor(state.score),
-            games: [...state.played],
-            details: state.details,
-            status: "hub",
-            current_game: null,
-          })
-        )
+        .then(() => Cloud().setStatus("hub", null, state.score))
         .catch((e) => console.warn("[Cloud] endGame", e));
     }
 

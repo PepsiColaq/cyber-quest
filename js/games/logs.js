@@ -74,7 +74,10 @@ window.GameModules.logs = function (root, ctx) {
     counter.textContent = " " + flagged.size;
   });
 
+  let finished = false;
   function finish() {
+    if (finished) return;
+    finished = true;
     stage.timer.stop();
     let score = 0,
       hits = 0;

@@ -294,7 +294,7 @@
           const detail = list
             .map(
               (r) =>
-                `${TITLES[r.game_id] || r.game_id}: <b>${r.score ?? 0}</b> (${fmtDur(r.duration_ms)})`
+                `${esc(TITLES[r.game_id] || r.game_id)}: <b>${Number(r.score) || 0}</b> (${esc(fmtDur(r.duration_ms))})`
             )
             .join("<br>");
           const t = a.finished_at ? new Date(a.finished_at).toLocaleString("ru-RU") : "";
@@ -305,7 +305,7 @@
           return `<tr>
             <td>${esc(t)}</td>
             <td><b>${esc(a.nick)}</b></td>
-            <td class="score">${a.score ?? 0}</td>
+            <td class="score">${Number(a.score) || 0}</td>
             <td>${esc(a.rank || "")}</td>
             <td>${esc(games)}</td>
             <td><details><summary class="muted">${list.length} мисс.</summary><div class="muted">${detail || "—"}</div></details></td>

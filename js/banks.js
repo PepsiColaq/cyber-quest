@@ -72,7 +72,7 @@ window.Banks = (function () {
       subj: "Восстановление доступа к диску",
       body:
         'Кто-то запросил сброс. Если это вы — перейдите: <span class="zone link" data-bad="1" data-why="Не домен Яндекса">http://yandex-disk-reset.tk</span>. Иначе игнорируйте. Также подтвердите <span class="zone" data-bad="1" data-why="Секретный вопрос — выманивание">ответ на секретный вопрос</span> в ответе. <span class="zone" data-bad="0" data-why="Нормальная оговорка">Письмо сформировано автоматически</span>.',
-      bad: 3,
+      bad: 2,
     },
     {
       from: 'admin@<span class="zone" data-bad="1" data-why="Кириллическая «а» в домене выглядит как латиница">соllege-portal.ru</span>',
