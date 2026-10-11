@@ -165,15 +165,17 @@ window.GameModules.attackmap = function (root, ctx) {
         keys[k] = v;
       };
       const onKey = (e, down) => {
-        const k = e.key.toLowerCase();
-        if (["arrowleft", "a"].includes(k)) bindKey("left", down);
-        if (["arrowright", "d"].includes(k)) bindKey("right", down);
-        if ([" ", "w", "arrowup"].includes(k)) {
+        // e.code — работает и при русской раскладке
+        const c = e.code;
+        if (c === "ArrowLeft" || c === "KeyA") bindKey("left", down);
+        if (c === "ArrowRight" || c === "KeyD") bindKey("right", down);
+        if (c === "ArrowDown" || c === "KeyS") bindKey("down", down);
+        if (c === "Space" || c === "KeyW" || c === "ArrowUp") {
           bindKey("jump", down);
           if (down) e.preventDefault();
         }
-        if (["j"].includes(k)) bindKey("shoot", down);
-        if (["q", "k"].includes(k)) bindKey("q", down);
+        if (c === "KeyJ" || c === "KeyZ") bindKey("shoot", down);
+        if (c === "KeyQ" || c === "KeyK" || c === "KeyX") bindKey("q", down);
       };
       window.addEventListener("keydown", (e) => onKey(e, true));
       window.addEventListener("keyup", (e) => onKey(e, false));
@@ -495,8 +497,8 @@ window.GameModules.attackmap = function (root, ctx) {
           player.vx *= 0.8;
         }
 
-        player.vy += 0.55;
-        if (player.vy > 14) player.vy = 14;
+        player.vy += keys.down && !player.onGround ? 0.95 : 0.55;
+        if (player.vy > 16) player.vy = 16;
 
         // move X
         player.x += player.vx;
