@@ -1329,6 +1329,10 @@
   color: var(--danger);
   background: var(--danger-soft);
 }
+.am-core.struck .am-shatter {
+  opacity: 1;
+  animation: amShatter 0.45s ease-out forwards;
+}
 @keyframes amCoreStruck {
   0%,
   100% {
@@ -1337,6 +1341,88 @@
   35% {
     transform: translate(-50%, -50%) scale(1.18);
   }
+}
+@keyframes amShatter {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+.am-core-ic {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+.am-cracks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+.am-cracks .ck {
+  fill: none;
+  stroke: rgba(255, 230, 200, 0.05);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.25s ease, stroke 0.25s ease;
+  filter: drop-shadow(0 0 2px rgba(255, 80, 80, 0.0));
+}
+.am-core[data-dmg="1"] .ck1,
+.am-core[data-dmg="2"] .ck1,
+.am-core[data-dmg="2"] .ck2,
+.am-core[data-dmg="3"] .ck1,
+.am-core[data-dmg="3"] .ck2,
+.am-core[data-dmg="3"] .ck3,
+.am-core[data-dmg="4"] .ck1,
+.am-core[data-dmg="4"] .ck2,
+.am-core[data-dmg="4"] .ck3,
+.am-core[data-dmg="4"] .ck4,
+.am-core[data-dmg="5"] .ck {
+  opacity: 1;
+  stroke: #ffe8e0;
+  filter: drop-shadow(0 0 3px rgba(255, 70, 70, 0.9));
+}
+.am-core[data-dmg="3"] .ck,
+.am-core[data-dmg="4"] .ck,
+.am-core[data-dmg="5"] .ck {
+  stroke-width: 2;
+}
+.am-core.critical {
+  border-color: var(--danger);
+  color: #ffb4b4;
+  background: rgba(255, 80, 80, 0.18);
+  box-shadow: 0 0 22px rgba(255, 70, 70, 0.35);
+  animation: corePulse 1.1s ease-in-out infinite;
+}
+.am-core.broken {
+  border-color: #ff3b3b;
+  color: #ff6b6b;
+  background: rgba(120, 20, 20, 0.55);
+  box-shadow: 0 0 36px rgba(255, 40, 40, 0.55);
+  filter: saturate(1.2);
+}
+.am-core.broken .am-core-ic {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+.am-shatter {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 80, 80, 0.35) 35%, transparent 70%);
 }
 @keyframes amShake {
   0%,

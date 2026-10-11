@@ -45,12 +45,23 @@ window.GameModules.attackmap = function (root, ctx) {
     <div class="amap">
       <svg class="am-lines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
       <div class="am-rings"><i></i><i></i><i></i></div>
-      <div class="am-core" style="left:${CX}%;top:${CY}%">${E.Icons.shield}</div>
+      <div class="am-core" style="left:${CX}%;top:${CY}%" data-dmg="0">
+        <span class="am-core-ic">${E.Icons.shield}</span>
+        <svg class="am-cracks" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="ck ck1" d="M32 8 L28 22 L18 26 L30 30 L26 48"/>
+          <path class="ck ck2" d="M32 8 L38 20 L50 24 L36 32 L42 52"/>
+          <path class="ck ck3" d="M12 34 L24 36 L28 48 L22 58"/>
+          <path class="ck ck4" d="M52 30 L40 38 L44 50 L54 56"/>
+          <path class="ck ck5" d="M20 16 L32 28 L44 18"/>
+        </svg>
+        <i class="am-shatter"></i>
+      </div>
     </div>`);
   stage.body.appendChild(map);
   window.hydrateIcons(stage.body);
 
   const svg = map.querySelector(".am-lines");
+  const coreEl = map.querySelector(".am-core");
   const hpEl = hud.querySelector("#amHp");
   const killEl = hud.querySelector("#amKill");
 
@@ -60,6 +71,11 @@ window.GameModules.attackmap = function (root, ctx) {
     running = true;
   function drawHp() {
     hpEl.textContent = "●".repeat(Math.max(0, hp)) + "○".repeat(Math.max(0, 5 - hp));
+    const dmg = Math.min(5, Math.max(0, 5 - hp));
+    coreEl.dataset.dmg = String(dmg);
+    coreEl.classList.toggle("critical", hp <= 2);
+    coreEl.classList.toggle("broken", hp <= 0);
+    hpEl.style.color = hp <= 2 ? "var(--danger)" : "var(--ok)";
   }
   drawHp();
 
@@ -122,11 +138,8 @@ window.GameModules.attackmap = function (root, ctx) {
       beam.style.setProperty("--am-rot", deg + "deg");
       beam.style.transform = "rotate(" + deg + "deg)";
       map.appendChild(beam);
-      const core = map.querySelector(".am-core");
-      if (core) {
-        core.classList.add("struck");
-        E.later(() => core.classList.remove("struck"), 450);
-      }
+      coreEl.classList.add("struck");
+      E.later(() => coreEl.classList.remove("struck"), 480);
       E.later(() => beam.remove(), 420);
     }
 
