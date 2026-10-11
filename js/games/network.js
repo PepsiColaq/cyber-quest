@@ -1,28 +1,29 @@
-/* 06 — Ночной дежурный SOC · triage алертов по приоритету. */
+/* 06 — Поддельный портал колледжа · Spot the Clone.
+   Полноэкранный «браузер» с фейковым ЛК. Найди 5 красных флагов. */
 window.GameModules.network = function (root, ctx) {
   const E = window.Engine;
   E.intro(
     root,
     {
       id: "network",
-      title: "Ночной дежурный SOC",
-      kicker: "Смена · triage алертов",
-      goal: "На стене мониторов вспыхивают алерты. Распредели каждый: Игнор / Смотреть / Критично.",
+      title: "Поддельный портал",
+      kicker: "Spot the Clone · найди 5 отличий",
+      goal: "Перед тобой «личный кабинет» колледжа. Он почти настоящий — но это ловушка. Найди все красные флаги.",
       rules: [
         {
-          ic: "bolt",
+          ic: "flag",
           tone: "bad",
-          t: "<b>Критично</b> — реальная угроза прямо сейчас (шифровальщик, чужой вход админа, утечка).",
-        },
-        {
-          ic: "clock",
-          tone: "warn",
-          t: "<b>Смотреть</b> — подозрительно, но не паника: последить, собрать контекст.",
+          t: "Смотри <b>адресную строку</b>, замок HTTPS, иконку сайта, странные кнопки и баннеры «срочно».",
         },
         {
           ic: "check",
           tone: "ok",
-          t: "<b>Игнор</b> — шум / плановое / безопасно. Ошибка приоритета: монитор «рвётся», штраф. Раунд: <b>40 сек</b>.",
+          t: "Кликай только подозрительное. Обычное меню и таблицу пар трогать не надо (−20).",
+        },
+        {
+          ic: "clock",
+          tone: "gold",
+          t: "На портал — <b>40 секунд</b>. Лупа следует за курсором. Все 5 флагов = крупный бонус.",
         },
       ],
     },
@@ -30,117 +31,54 @@ window.GameModules.network = function (root, ctx) {
   );
 
   function play(root, ctx) {
-    const BANK = [
+    const portals = [
       {
-        title: "Ransomware.Note",
-        body: "На файловом сервере появились .LOCKED и записка с выкупом",
-        sev: "critical",
-        why: "Шифровальщик — изоляция и реакция немедленно",
+        tab: "Личный кабинет — Колледж",
+        favicon: "💀",
+        favWhy: "Чужой favicon вместо герба колледжа",
+        lock: "open",
+        lockWhy: "Нет замка HTTPS — соединение не защищено",
+        protocol: "http://",
+        host: "соllege-lk.online",
+        hostWhy: "В слове college спрятана кириллическая «с» — поддельный домен",
+        path: "/cabinet",
+        user: "Иванов А.С. · группа ИС-21",
+        foot: "support@соllege-lk.online",
       },
       {
-        title: "Admin@03:14",
-        body: "Успешный вход domain\\admin с IP 185.220.x.x (другая страна)",
-        sev: "critical",
-        why: "Ночной админ из-за рубежа — компрометация учётки",
+        tab: "Маршал Чуйков · Кабинет",
+        favicon: "🔥",
+        favWhy: "Favicon не герб колледжа — сигнал чужого сайта",
+        lock: "warn",
+        lockWhy: "Браузер не доверяет сертификату",
+        protocol: "https://",
+        host: "chuikov-cabinet.ru.com",
+        hostWhy: "Домен .ru.com — не официальный сайт колледжа",
+        path: "/student",
+        user: "Петрова М.И. · абитуриент",
+        foot: "help@chuikov-cabinet.ru.com",
       },
       {
-        title: "DNS → pastebin",
-        body: "ПК бухгалтерии шлёт длинные DNS-запросы на странный домен",
-        sev: "critical",
-        why: "Похоже на скрытый канал утечки данных",
-      },
-      {
-        title: "RDP brute",
-        body: "С внешнего IP 400+ FAIL к серверу практики за 2 минуты, затем OK",
-        sev: "critical",
-        why: "После брутфорса успешный вход — уже внутри",
-      },
-      {
-        title: "USB.Autorun",
-        body: "На лаб. ПК запустился неизвестный .exe с флешки «Зарплаты»",
-        sev: "critical",
-        why: "Классическая доставка вредоноса",
-      },
-      {
-        title: "Mail rule",
-        body: "У преподавателя создано скрытое правило: все письма → внешний ящик",
-        sev: "critical",
-        why: "Тихая пересылка почты — кража переписки",
-      },
-      {
-        title: "New device",
-        body: "Вход в почту a.petrov с нового iPhone, город тот же, днём",
-        sev: "watch",
-        why: "Может быть новый телефон — проверить у человека",
-      },
-      {
-        title: "FAIL×6",
-        body: "Шесть неверных паролей к VPN, потом тишина, IP из города кампуса",
-        sev: "watch",
-        why: "Похоже на опечатки; стоит понаблюдать",
-      },
-      {
-        title: "Port scan",
-        body: "Внутренний хост просканировал соседние /24 за 40 секунд",
-        sev: "watch",
-        why: "Может быть лаба или червь — нужна проверка",
-      },
-      {
-        title: "Odd hours",
-        body: "Студент зашёл в LMS в 01:20 — обычно только днём",
-        sev: "watch",
-        why: "Аномалия режима, но не доказательство взлома",
-      },
-      {
-        title: "Cert warn",
-        body: "На сайте колледжа сертификат истекает через 9 дней",
-        sev: "watch",
-        why: "Плановая задача, не инцидент «прямо сейчас»",
-      },
-      {
-        title: "Backup.OK",
-        body: "Ночной бэкап БД завершён, код 0, как каждый день в 02:00",
-        sev: "ignore",
-        why: "Плановое событие — не тревога",
-      },
-      {
-        title: "AV update",
-        body: "Антивирус на 40 ПК обновил базы по расписанию",
-        sev: "ignore",
-        why: "Штатное обновление",
-      },
-      {
-        title: "Printer jam",
-        body: "Принтер в 214: «закончилась бумага»",
-        sev: "ignore",
-        why: "Не киберинцидент",
-      },
-      {
-        title: "DHCP renew",
-        body: "Ноут учителя получил новый IP в той же подсети",
-        sev: "ignore",
-        why: "Обычная аренда адреса",
-      },
-      {
-        title: "Spam quarantine",
-        body: "Фильтр отложил 12 писем «VIAGRA» в карантин",
-        sev: "ignore",
-        why: "Система уже отработала",
+        tab: "Портал практики",
+        favicon: "⚠️",
+        favWhy: "Предупреждающая иконка вместо бренда колледжа",
+        lock: "open",
+        lockWhy: "Замка нет: пароль могут перехватить",
+        protocol: "http://",
+        host: "marshal-chuikov.secure-edu.top",
+        hostWhy: "Длинный домен .top — классика фишинговых клонов",
+        path: "/lk",
+        user: "Сидоров К. · ИБ-22",
+        foot: "it@secure-edu.top",
       },
     ];
 
-    const COLS = [
-      { id: "ignore", label: "Игнор", hint: "шум / план", tone: "ok" },
-      { id: "watch", label: "Смотреть", hint: "подозрительно", tone: "warn" },
-      { id: "critical", label: "Критично", hint: "действовать", tone: "bad" },
-    ];
-
-    const alerts = E.pick(BANK, 7).map((a, i) => Object.assign({}, a, { uid: "a" + i }));
+    const P = E.pick(portals, 1)[0];
 
     const stage = E.buildStage(root, {
       id: "network",
-      title: "Ночной дежурный SOC",
-      kicker: "Смена · triage алертов · 40 сек",
+      title: "Поддельный портал",
+      kicker: "Spot the Clone · 40 секунд",
       rounds: 0,
       timed: true,
     });
@@ -149,195 +87,193 @@ window.GameModules.network = function (root, ctx) {
     stage.body.appendChild(
       E.el(
         `<div>
-          <div class="q-prompt">Стена алертов</div>
-          <div class="q-sub">Перетащи монитор в колонку или тапни монитор → колонку. Верный приоритет: <b>+70</b>.</div>
+          <div class="q-prompt">Это настоящий кабинет… или нет?</div>
+          <div class="q-sub">Найди <b>5</b> подделок. Лупа увеличивает зону под курсором. Флаги: <b class="mono" id="scFound">0/5</b></div>
         </div>`
       )
     );
 
-    const hud = E.el(
-      `<div class="patch-hud">
-        <span>Разобрано: <b id="socDone">0</b>/${alerts.length}</span>
-        <span>Верно: <b id="socOk" style="color:var(--ok)">0</b></span>
-        <span>Ошибки: <b id="socBad" style="color:var(--danger)">0</b></span>
-      </div>`
-    );
-    stage.body.appendChild(hud);
+    const wrap = E.el('<div class="sc-stage"></div>');
+    stage.body.appendChild(wrap);
 
-    const wall = E.el('<div class="soc-wall" id="socWall"></div>');
-    stage.body.appendChild(wall);
+    const lockHtml =
+      P.lock === "warn"
+        ? `<span class="sc-lock warn sc-hit" data-flag="1" data-why="${P.lockWhy}">⚠️</span>`
+        : `<span class="sc-lock open sc-hit" data-flag="1" data-why="${P.lockWhy}">🔓</span>`;
 
-    const bins = E.el('<div class="soc-bins" id="socBins"></div>');
-    COLS.forEach((c) => {
-      bins.appendChild(
-        E.el(
-          `<div class="soc-bin ${c.tone}" data-bin="${c.id}" tabindex="0">
-            <b>${c.label}</b>
-            <span>${c.hint}</span>
-          </div>`
-        )
-      );
-    });
-    stage.body.appendChild(bins);
+    const browser = E.el(`
+      <div class="sc-browser">
+        <div class="sc-chrome">
+          <div class="sc-dots"><i></i><i></i><i></i></div>
+          <div class="sc-tabs">
+            <div class="sc-tab on">
+              <span class="sc-fav sc-hit" data-flag="1" data-why="${P.favWhy}">${P.favicon}</span>
+              <span class="sc-tab-t">${P.tab}</span>
+            </div>
+            <div class="sc-tab ghost">Новая вкладка</div>
+          </div>
+        </div>
+        <div class="sc-addr">
+          ${lockHtml}
+          <div class="sc-url" title="Адресная строка">
+            <span class="sc-proto">${P.protocol}</span><span class="sc-host sc-hit" data-flag="1" data-why="${P.hostWhy}">${P.host}</span><span class="sc-path">${P.path}</span>
+          </div>
+          <div class="sc-addr-tools" aria-hidden="true">☆ ⋯</div>
+        </div>
+        <div class="sc-viewport" id="scView">
+          <div class="sc-lens" id="scLens" hidden></div>
+          <aside class="sc-side">
+            <div class="sc-brand">
+              <div class="sc-logo">К</div>
+              <div>
+                <b>Колледж им. Чуйкова</b>
+                <small>Личный кабинет</small>
+              </div>
+            </div>
+            <nav class="sc-nav">
+              <span class="on">Главная</span>
+              <span class="sc-decoy" data-flag="0" data-why="Обычный раздел — не флаг">Оценки</span>
+              <span class="sc-decoy" data-flag="0" data-why="Обычный раздел — не флаг">Расписание</span>
+              <span>Документы</span>
+              <span>Сообщения</span>
+            </nav>
+            <div class="sc-side-foot">Сессия активна · 14:02</div>
+          </aside>
+          <main class="sc-main">
+            <header class="sc-topbar">
+              <div>
+                <div class="sc-hello">Добро пожаловать</div>
+                <div class="sc-user">${P.user}</div>
+              </div>
+              <div class="sc-top-actions">
+                <button type="button" class="sc-ghost sc-decoy" data-flag="0" data-why="Обычная кнопка профиля">Профиль</button>
+                <button type="button" class="sc-danger-cta sc-hit" data-flag="1" data-why="Настоящий кабинет не требует пароль всплывающей кнопкой «срочно»">⚠ Срочно подтвердите пароль</button>
+              </div>
+            </header>
+
+            <div class="sc-banner sc-hit" data-flag="1" data-why="Давление срочностью и призыв «подтвердить» — классика фишинга">
+              <b>Внимание!</b> Доступ заблокируют через <em>2 часа</em>.
+              <u>Подтвердите личность сейчас →</u>
+            </div>
+
+            <section class="sc-cards">
+              <div class="sc-card"><span>Средний балл</span><b>4.6</b></div>
+              <div class="sc-card"><span>Долги</span><b>0</b></div>
+              <div class="sc-card"><span>Сообщения</span><b>3</b></div>
+            </section>
+
+            <section class="sc-panel">
+              <h3>Ближайшие пары</h3>
+              <table class="sc-table">
+                <tr><td>09:00</td><td>Информационная безопасность</td><td>ауд. 312</td></tr>
+                <tr><td>10:45</td><td>Сети ЭВМ</td><td>ауд. 208</td></tr>
+                <tr><td>12:30</td><td>Практика</td><td>лаб. 4</td></tr>
+              </table>
+            </section>
+
+            <footer class="sc-foot">
+              <span>© Колледж им. Маршала В.И. Чуйкова</span>
+              · <span class="sc-mail">${P.foot}</span>
+            </footer>
+          </main>
+        </div>
+      </div>`);
+    wrap.appendChild(browser);
 
     const foot = E.el(
       `<div class="stage-foot">
-        <span class="chip"><span class="dot"></span> Ночная смена SOC</span>
-        <button class="btn btn-ghost" id="socDoneBtn" type="button">Завершить смену</button>
+        <span class="chip"><span class="dot"></span> Режим инспектора</span>
+        <button class="btn btn-ghost" id="scSkip" type="button">Сдать как есть</button>
       </div>`
     );
     stage.body.appendChild(foot);
-    window.hydrateIcons(stage.body);
 
-    const doneEl = hud.querySelector("#socDone");
-    const okEl = hud.querySelector("#socOk");
-    const badEl = hud.querySelector("#socBad");
+    const foundEl = stage.body.querySelector("#scFound");
+    const view = browser.querySelector("#scView");
+    const lens = browser.querySelector("#scLens");
+    const flagNodes = [...browser.querySelectorAll(".sc-hit")];
+    const NEED = 5;
 
-    let score = 0,
-      okN = 0,
-      badN = 0,
-      placed = 0,
+    let found = 0,
+      score = 0,
       running = true,
-      selected = null;
+      finished = false;
 
-    function scramble(len) {
-      const chars = "01ABCDEF#$%";
-      let s = "";
-      for (let i = 0; i < len; i++) s += chars[(Math.random() * chars.length) | 0];
-      return s;
-    }
-
-    alerts.forEach((a) => {
-      const mon = E.el(
-        `<div class="soc-mon" draggable="true" data-uid="${a.uid}">
-          <div class="soc-bezel">
-            <div class="soc-scan"></div>
-            <div class="soc-digits" aria-hidden="true">${scramble(18)}</div>
-            <div class="soc-tag">${a.title}</div>
-            <div class="soc-body">${a.body}</div>
-          </div>
-        </div>`
-      );
-      wall.appendChild(mon);
-
-      // бегущие «цифры»
-      const dig = mon.querySelector(".soc-digits");
-      const tick = E.every(() => {
-        if (!mon.isConnected || mon.classList.contains("done")) return;
-        dig.textContent = scramble(18);
-      }, 180 + ((Math.random() * 120) | 0));
-
-      mon.addEventListener("pointerdown", () => {
-        if (!running || mon.classList.contains("done")) return;
-        wall.querySelectorAll(".soc-mon").forEach((m) => m.classList.remove("picked"));
-        mon.classList.add("picked");
-        selected = a.uid;
-      });
-
-      mon.addEventListener("dragstart", (e) => {
-        if (!running || mon.classList.contains("done")) {
-          e.preventDefault();
-          return;
-        }
-        selected = a.uid;
-        mon.classList.add("dragging");
-        e.dataTransfer.setData("text/plain", a.uid);
-        e.dataTransfer.effectAllowed = "move";
-      });
-      mon.addEventListener("dragend", () => mon.classList.remove("dragging"));
-    });
-
-    function findAlert(uid) {
-      return alerts.find((x) => x.uid === uid);
-    }
-
-    function place(uid, binId, binEl) {
+    view.addEventListener("pointermove", (e) => {
       if (!running) return;
-      const a = findAlert(uid);
-      const mon = wall.querySelector(`.soc-mon[data-uid="${uid}"]`);
-      if (!a || !mon || mon.classList.contains("done")) return;
+      const r = view.getBoundingClientRect();
+      lens.hidden = false;
+      lens.style.left = e.clientX - r.left + "px";
+      lens.style.top = e.clientY - r.top + "px";
+    });
+    view.addEventListener("pointerleave", () => {
+      lens.hidden = true;
+    });
 
-      mon.classList.add("done");
-      mon.classList.remove("picked", "dragging");
-      mon.setAttribute("draggable", "false");
-      placed++;
-      doneEl.textContent = placed;
-      selected = null;
-
-      const correct = a.sev === binId;
-      if (correct) {
-        score += 70;
-        okN++;
-        okEl.textContent = okN;
-        mon.classList.add("soc-ok");
-        binEl.classList.add("flash-ok");
-        E.later(() => binEl.classList.remove("flash-ok"), 320);
-        stage.feedback(true, "Верный приоритет", a.why);
-        stage.fly(70, mon);
-      } else {
-        score = Math.max(0, score - 35);
-        badN++;
-        badEl.textContent = badN;
-        mon.classList.add("soc-boom");
-        binEl.classList.add("flash-bad");
-        E.later(() => binEl.classList.remove("flash-bad"), 320);
-        const right = COLS.find((c) => c.id === a.sev);
-        stage.feedback(
-          false,
-          "Неверный приоритет!",
-          a.why + (right ? " → «" + right.label + "»" : "")
-        );
-        stage.fly(-35, mon);
+    function markFound(el) {
+      if (el.classList.contains("sc-found")) return;
+      el.classList.add("sc-found");
+      found++;
+      score += 80;
+      foundEl.textContent = found + "/" + NEED;
+      stage.feedback(true, "Флаг пойман!", el.dataset.why || "");
+      stage.fly(80, el);
+      if (found >= NEED) {
+        score += 120;
+        finish(true);
       }
-
-      if (placed >= alerts.length) finish();
     }
 
-    bins.querySelectorAll(".soc-bin").forEach((bin) => {
-      bin.addEventListener("dragover", (e) => {
+    function onHit(el) {
+      if (!running || el.classList.contains("sc-found")) return;
+      if (el.dataset.flag === "1") markFound(el);
+      else {
+        el.classList.add("sc-miss");
+        score = Math.max(0, score - 20);
+        stage.feedback(false, "Это нормально", el.dataset.why || "Здесь нет подделки");
+        stage.fly(-20, el);
+        E.later(() => el.classList.remove("sc-miss"), 420);
+      }
+    }
+
+    browser.querySelectorAll(".sc-hit, .sc-decoy").forEach((el) => {
+      el.addEventListener("click", (e) => {
         e.preventDefault();
-        bin.classList.add("over");
-      });
-      bin.addEventListener("dragleave", () => bin.classList.remove("over"));
-      bin.addEventListener("drop", (e) => {
-        e.preventDefault();
-        bin.classList.remove("over");
-        const uid = e.dataTransfer.getData("text/plain") || selected;
-        if (uid) place(uid, bin.dataset.bin, bin);
-      });
-      bin.addEventListener("click", () => {
-        if (selected) place(selected, bin.dataset.bin, bin);
+        e.stopPropagation();
+        onHit(el);
       });
     });
 
-    let finished = false;
-    function finish() {
+    function revealRest() {
+      flagNodes.forEach((f) => {
+        if (!f.classList.contains("sc-found")) f.classList.add("sc-reveal");
+      });
+    }
+
+    function finish(perfect) {
       if (finished) return;
       finished = true;
       running = false;
       stage.timer.stop();
-      foot.querySelector("#socDoneBtn").disabled = true;
-      // бонус за скорость и чистоту
-      if (okN === alerts.length) score += 80;
-      else if (stage.timer && stage.timer.left > 12) score += 30;
-      const title =
-        okN === alerts.length
-          ? "Смена закрыта идеально"
-          : okN >= 5
-            ? "Смена удержана"
-            : "Смена в огне";
-      stage.feedback(okN >= 5, title, `Верно ${okN} из ${alerts.length}`);
+      lens.hidden = true;
+      foot.querySelector("#scSkip").disabled = true;
+      if (!perfect) revealRest();
+      stage.feedback(
+        found >= 4,
+        found >= NEED ? "Клон разоблачён!" : found >= 3 ? "Почти весь клон" : "Клон ускользнул",
+        `Найдено ${found} из ${NEED}`
+      );
       E.later(
         () =>
           ctx.done({
             score: Math.max(0, score),
-            detail: { ok: okN, bad: badN, total: alerts.length },
+            detail: { found, total: NEED },
           }),
-        1400
+        1500
       );
     }
 
-    foot.querySelector("#socDoneBtn").addEventListener("click", finish);
-    stage.timer.start(40, finish);
+    foot.querySelector("#scSkip").addEventListener("click", () => finish(false));
+    stage.timer.start(40, () => finish(false));
   }
 };
