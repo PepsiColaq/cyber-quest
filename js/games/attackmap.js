@@ -44,42 +44,11 @@ window.GameModules.attackmap = function (root, ctx) {
     const wrap = E.el('<div class="usb-wrap"></div>');
     stage.body.appendChild(wrap);
 
-    /* ---------- ИНТРО (строгий минимализм, CSS) ---------- */
+    /* ---------- ИНТРО на Canvas (не зависит от CSS-кэша) ---------- */
     const intro = E.el(`
-      <div class="usb-intro" id="usbIntro">
-        <button type="button" class="usb-skip" id="usbSkip">Пропустить →</button>
-        <div class="usb-stage" id="usbScene" data-phase="0">
-          <div class="usb-sky"></div>
-          <div class="usb-floor"></div>
-          <div class="usb-desk"></div>
-          <div class="usb-laptop" aria-hidden="true">
-            <div class="usb-screen-bezel">
-              <div class="usb-dialog">
-                <div class="usb-dialog-h">setup.exe</div>
-                <div class="usb-dialog-p">Неизвестный издатель</div>
-                <button type="button" class="usb-avbtn" id="usbAvBtn">Запустить антивирус</button>
-              </div>
-            </div>
-            <div class="usb-laptop-base">
-              <div class="usb-slot"></div>
-            </div>
-          </div>
-          <div class="usb-hand" aria-hidden="true">
-            <div class="usb-palm"></div>
-            <div class="usb-finger f1"></div>
-            <div class="usb-finger f2"></div>
-            <div class="usb-finger f3"></div>
-          </div>
-          <div class="usb-drive" aria-hidden="true">
-            <div class="usb-drive-tip"></div>
-            <div class="usb-drive-body"><span>Зарплаты_2026</span></div>
-          </div>
-          <div class="usb-titlecard">
-            <span>Ты — модуль очистки</span>
-            <i>USB Sentinel</i>
-          </div>
-          <div class="usb-caption" id="usbCap">На земле лежит флешка</div>
-        </div>
+      <div class="usb-intro" id="usbIntro" style="position:relative;overflow:hidden;border-radius:16px;border:1px solid #ddd6c8;background:#f3f0e8;min-height:360px;aspect-ratio:16/9;max-height:520px">
+        <button type="button" class="usb-skip" id="usbSkip" style="position:absolute;top:12px;right:12px;z-index:5;padding:8px 14px;border-radius:999px;border:1px solid #cfc7b8;background:#fff;color:#1c2430;font:600 13px Manrope,sans-serif;cursor:pointer">Пропустить →</button>
+        <canvas id="usbIntroCv" width="960" height="540" style="display:block;width:100%;height:auto;background:#f3f0e8"></canvas>
       </div>`);
     wrap.appendChild(intro);
 
@@ -106,49 +75,12 @@ window.GameModules.attackmap = function (root, ctx) {
     wrap.appendChild(gameRoot);
 
     let introDone = false;
-    const scene = intro.querySelector("#usbScene");
-    const cap = intro.querySelector("#usbCap");
-
-    const INTRO = [
-      { t: 0, p: "0", c: "На земле лежит флешка" },
-      { t: 1400, p: "1", c: "Рука тянется" },
-      { t: 2800, p: "2", c: "Берут флешку" },
-      { t: 4200, p: "3", c: "Подняли" },
-      { t: 5600, p: "4", c: "Дома у компьютера" },
-      { t: 7200, p: "5", c: "К разъёму USB" },
-      { t: 8600, p: "6", c: "Вставляют", sfx: "usb" },
-      { t: 10000, p: "7", c: "Подозрительный файл" },
-      { t: 11800, p: "8", c: "Запуск антивируса", sfx: "pickup" },
-      { t: 13200, p: "9", c: "", sfx: "whoosh" },
-      { t: 15000, p: null, c: "" },
-    ];
-
-    function setPhase(ph, text) {
-      scene.setAttribute("data-phase", ph);
-      if (cap) cap.textContent = text || "";
-    }
-
-    function runIntro() {
-      setPhase("0", INTRO[0].c);
-      INTRO.forEach((step) => {
-        E.later(() => {
-          if (introDone) return;
-          if (step.p == null) {
-            endIntro();
-            return;
-          }
-          setPhase(step.p, step.c);
-          if (step.sfx && Audio()) {
-            Audio().resume();
-            Audio().sfx[step.sfx]();
-          }
-        }, step.t);
-      });
-    }
+    let introRaf = 0;
 
     function endIntro() {
       if (introDone) return;
       introDone = true;
+      cancelAnimationFrame(introRaf);
       intro.hidden = true;
       gameRoot.hidden = false;
       if (Audio()) {
@@ -162,20 +94,233 @@ window.GameModules.attackmap = function (root, ctx) {
       if (Audio()) Audio().resume();
       endIntro();
     });
-    intro.querySelector("#usbAvBtn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (introDone) return;
-      setPhase("8", "Запуск антивируса");
-      if (Audio()) Audio().sfx.pickup();
-      E.later(() => {
-        if (introDone) return;
-        setPhase("9", "");
-        if (Audio()) Audio().sfx.whoosh();
-        E.later(endIntro, 1800);
-      }, 900);
-    });
 
-    runIntro();
+    (function runCanvasIntro() {
+      const cv = intro.querySelector("#usbIntroCv");
+      const g = cv.getContext("2d");
+      const W = cv.width;
+      const H = cv.height;
+      const PAPER = "#f3f0e8";
+      const INK = "#1c2430";
+      const GOLD = "#c9a227";
+      const SKY = "#d9e2ea";
+      const FLOOR = "#c5c0b4";
+      const HAND = "#e8c4a8";
+      const MUTE = "#6b7380";
+
+      // ключевые кадры: время (сек) → состояние
+      const keys = [
+        { t: 0.0, scene: "street", drive: [440, 360], hand: [620, -80, 0], rot: -0.2, desk: 0, lap: 0, dlg: 0, title: 0, cap: "На земле лежит флешка" },
+        { t: 1.4, scene: "street", drive: [440, 360], hand: [520, 210, 1], rot: -0.2, desk: 0, lap: 0, dlg: 0, title: 0, cap: "Рука тянется" },
+        { t: 2.8, scene: "street", drive: [460, 340], hand: [470, 250, 1], rot: -0.1, desk: 0, lap: 0, dlg: 0, title: 0, cap: "Берут флешку", sfx: "pickup" },
+        { t: 4.2, scene: "street", drive: [460, 240], hand: [470, 150, 1], rot: 0, desk: 0, lap: 0, dlg: 0, title: 0, cap: "Подняли" },
+        { t: 5.6, scene: "room", drive: [280, 280], hand: [290, 190, 1], rot: 0, desk: 1, lap: 1, dlg: 0, title: 0, cap: "Дома у компьютера" },
+        { t: 7.2, scene: "room", drive: [560, 340], hand: [540, 260, 1], rot: 0, desk: 1, lap: 1, dlg: 0, title: 0, cap: "К разъёму USB" },
+        { t: 8.6, scene: "room", drive: [640, 355], hand: [600, 280, 0.3], rot: 0, desk: 1, lap: 1, dlg: 0, title: 0, cap: "Вставляют", sfx: "usb" },
+        { t: 10.0, scene: "room", drive: [640, 355], hand: [600, 280, 0], rot: 0, desk: 1, lap: 1, dlg: 1, title: 0, cap: "Подозрительный файл" },
+        { t: 11.6, scene: "room", drive: [640, 355], hand: [600, 280, 0], rot: 0, desk: 1, lap: 1, dlg: 1, title: 0, cap: "Запуск антивируса", sfx: "pickup", btn: 1 },
+        { t: 13.0, scene: "title", drive: [640, 355], hand: [600, 280, 0], rot: 0, desk: 0, lap: 0, dlg: 0, title: 1, cap: "", sfx: "whoosh" },
+        { t: 14.8, scene: "title", drive: [640, 355], hand: [600, 280, 0], rot: 0, desk: 0, lap: 0, dlg: 0, title: 1, cap: "" },
+      ];
+
+      function lerp(a, b, u) {
+        return a + (b - a) * u;
+      }
+      function ease(u) {
+        return u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      }
+      function mix(a, b, u) {
+        u = ease(Math.max(0, Math.min(1, u)));
+        const o = {};
+        o.drive = [lerp(a.drive[0], b.drive[0], u), lerp(a.drive[1], b.drive[1], u)];
+        o.hand = [lerp(a.hand[0], b.hand[0], u), lerp(a.hand[1], b.hand[1], u), lerp(a.hand[2], b.hand[2], u)];
+        o.rot = lerp(a.rot, b.rot, u);
+        o.desk = lerp(a.desk, b.desk, u);
+        o.lap = lerp(a.lap, b.lap, u);
+        o.dlg = lerp(a.dlg, b.dlg, u);
+        o.title = lerp(a.title, b.title, u);
+        o.btn = lerp(a.btn || 0, b.btn || 0, u);
+        o.cap = u < 0.5 ? a.cap : b.cap;
+        o.scene = u < 0.5 ? a.scene : b.scene;
+        return o;
+      }
+
+      function sample(t) {
+        if (t <= keys[0].t) return keys[0];
+        for (let i = 0; i < keys.length - 1; i++) {
+          if (t >= keys[i].t && t <= keys[i + 1].t) {
+            const u = (t - keys[i].t) / (keys[i + 1].t - keys[i].t);
+            return mix(keys[i], keys[i + 1], u);
+          }
+        }
+        return keys[keys.length - 1];
+      }
+
+      function roundRect(x, y, w, h, r) {
+        g.beginPath();
+        g.moveTo(x + r, y);
+        g.arcTo(x + w, y, x + w, y + h, r);
+        g.arcTo(x + w, y + h, x, y + h, r);
+        g.arcTo(x, y + h, x, y, r);
+        g.arcTo(x, y, x + w, y, r);
+        g.closePath();
+      }
+
+      function drawDrive(x, y, rot) {
+        g.save();
+        g.translate(x, y);
+        g.rotate(rot);
+        g.fillStyle = "#6e8799";
+        roundRect(-52, -12, 18, 24, 2);
+        g.fill();
+        g.fillStyle = GOLD;
+        roundRect(-34, -16, 86, 32, 5);
+        g.fill();
+        g.fillStyle = INK;
+        g.font = "700 11px JetBrains Mono, monospace";
+        g.textAlign = "center";
+        g.fillText("Зарплаты_2026", 10, 4);
+        g.restore();
+      }
+
+      function drawHand(x, y, a) {
+        if (a < 0.02) return;
+        g.save();
+        g.globalAlpha = a;
+        g.fillStyle = HAND;
+        roundRect(x - 18, y, 44, 70, 10);
+        g.fill();
+        roundRect(x - 14, y - 36, 12, 42, 6);
+        g.fill();
+        roundRect(x + 2, y - 42, 12, 48, 6);
+        g.fill();
+        roundRect(x + 18, y - 34, 12, 40, 6);
+        g.fill();
+        g.restore();
+      }
+
+      function drawLaptop(alpha, dlg, btnGlow) {
+        if (alpha < 0.02) return;
+        g.save();
+        g.globalAlpha = alpha;
+        const lx = 340;
+        const ly = 150;
+        g.fillStyle = "#2a3140";
+        roundRect(lx, ly, 280, 130, 8);
+        g.fill();
+        g.fillStyle = "#b7b1a6";
+        roundRect(lx, ly + 130, 280, 36, 4);
+        g.fill();
+        g.fillStyle = INK;
+        roundRect(lx + 220, ly + 142, 28, 12, 2);
+        g.fill();
+        if (dlg > 0.05) {
+          g.globalAlpha = alpha * dlg;
+          g.fillStyle = "#fff";
+          roundRect(lx + 24, ly + 22, 200, 96, 8);
+          g.fill();
+          g.strokeStyle = "#e2ddd3";
+          g.lineWidth = 1;
+          g.stroke();
+          g.fillStyle = INK;
+          g.font = "700 16px Manrope, sans-serif";
+          g.textAlign = "left";
+          g.fillText("setup.exe", lx + 40, ly + 48);
+          g.fillStyle = MUTE;
+          g.font = "12px Manrope, sans-serif";
+          g.fillText("Неизвестный издатель", lx + 40, ly + 68);
+          g.fillStyle = GOLD;
+          roundRect(lx + 40, ly + 80, 160, 28, 6);
+          g.fill();
+          if (btnGlow > 0.2) {
+            g.strokeStyle = "rgba(201,162,39,0.55)";
+            g.lineWidth = 3;
+            roundRect(lx + 38, ly + 78, 164, 32, 7);
+            g.stroke();
+          }
+          g.fillStyle = INK;
+          g.font = "700 13px Manrope, sans-serif";
+          g.fillText("Запустить антивирус", lx + 52, ly + 98);
+        }
+        g.restore();
+      }
+
+      let t0 = performance.now();
+      let lastSfx = "";
+      function frame(now) {
+        if (introDone) return;
+        const t = (now - t0) / 1000;
+        if (t >= 15) {
+          endIntro();
+          return;
+        }
+        // sfx on key hit
+        for (let i = 0; i < keys.length; i++) {
+          const k = keys[i];
+          if (k.sfx && t >= k.t && t < k.t + 0.05 && lastSfx !== k.t + k.sfx) {
+            lastSfx = k.t + k.sfx;
+            if (Audio()) {
+              Audio().resume();
+              Audio().sfx[k.sfx]();
+            }
+          }
+        }
+
+        const s = sample(t);
+        g.clearRect(0, 0, W, H);
+
+        // фон улица / комната
+        if (s.scene === "street" || s.desk < 0.95) {
+          g.globalAlpha = 1 - s.desk;
+          g.fillStyle = SKY;
+          g.fillRect(0, 0, W, H * 0.62);
+          g.fillStyle = FLOOR;
+          g.fillRect(0, H * 0.62, W, H * 0.38);
+        }
+        if (s.desk > 0.02) {
+          g.globalAlpha = s.desk;
+          g.fillStyle = "#ebe6dc";
+          g.fillRect(0, 0, W, H);
+          g.fillStyle = "#d8d0c2";
+          g.fillRect(0, H * 0.58, W, H * 0.42);
+        }
+        g.globalAlpha = 1;
+
+        drawLaptop(s.lap, s.dlg, s.btn || 0);
+        drawDrive(s.drive[0], s.drive[1], s.rot);
+        drawHand(s.hand[0], s.hand[1], s.hand[2]);
+
+        if (s.title > 0.02) {
+          g.globalAlpha = s.title;
+          g.fillStyle = PAPER;
+          g.fillRect(0, 0, W, H);
+          g.fillStyle = INK;
+          g.font = "750 36px Manrope, sans-serif";
+          g.textAlign = "center";
+          g.fillText("Ты — модуль очистки", W / 2, H / 2 - 8);
+          g.fillStyle = GOLD;
+          g.font = "600 16px JetBrains Mono, monospace";
+          g.fillText("USB Sentinel", W / 2, H / 2 + 28);
+          g.globalAlpha = 1;
+        }
+
+        if (s.cap) {
+          g.fillStyle = "rgba(255,255,255,0.92)";
+          roundRect(24, H - 54, 280, 32, 16);
+          g.fill();
+          g.strokeStyle = "#ddd6c8";
+          g.lineWidth = 1;
+          g.stroke();
+          g.fillStyle = INK;
+          g.font = "600 14px Manrope, sans-serif";
+          g.textAlign = "left";
+          g.fillText(s.cap, 40, H - 33);
+        }
+
+        introRaf = requestAnimationFrame(frame);
+      }
+      introRaf = requestAnimationFrame(frame);
+    })();
 
     /* ---------- ПЛАТФОРМЕР ---------- */
     function startPlatformer() {
